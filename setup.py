@@ -15,13 +15,12 @@ def get_version(relpath):
 
 setup(name='mentos',
       version=get_version('mentos/__init__.py'),
-      description='MENTOS: Maximum entropy approach for estimating metabolite concentrations and fluxes'
+      description='MENTOS: Maximum entropy approach for estimating metabolite concentrations and fluxes',
       url='http://github.com/djinnome/mentos',
       author='Jeremy Zucker',
       author_email='djinnome@gmail.com',
       install_requires=[
-       'pandas',
-        'scipy','cvxpy','numpy','cobra','libsbml','pyOpt'],
+       'pandas',        'scipy','cvxpy','numpy','cobra','python-libsbml','pyOpt'],
       license='MIT',
       packages=['mentos'],
       zip_safe=False)
