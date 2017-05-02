@@ -149,10 +149,13 @@ def run_mentos(fullS, S, deltaG0, mu0, c_L, c_U, v_L, v_U,initial_log_c,initial_
     """
     run_mentos computes the nonconvex optimization using pyOpt.  
 .. math::
-    \min & f(x) w.r.t. x
-    \text{s.t.} & g_j(x) = 0, j = 1, \ldots, m_e
-     & g_j(x) \leq 0, j = m_e + 1, \ldots, m
-     & x_i_L \leq x_i \leq x_i_U, i = 1,\ldots, n
+    \underset{x}{\min} & f(x) & 
+
+     & g_j(x) = 0, & j = 1, \ldots, m_e  
+
+     & g_j(x) \leq 0, & j = m_e + 1, \ldots, m  
+
+     & x_{iL} \leq x_i \leq x_{iU}, & i = 1,\ldots, n 
 
 
 where:
@@ -164,34 +167,36 @@ where:
     * m_e is the number of equality constraints
     * m is the total number of constraints (number of equality constraints: m_i = m - m_e)
 
-    The arguments to this function are as follows:
-    :param fullS:  The stoichometric matrix data frame object containing all metabolites
-    :param S:  The stoichiometric matrix numpy matrix containing only those metabolites in steady state
-    :type S: pandas.DataFrame
-    :param deltaG0: The standard change in Gibbs free energy for all reactions
-    :param deltaG0: numpy.array
-    :param mu0: The standard chemical potential numpy array for all metabolites
-    :type mu0: numpy.array
-    :param c_L:  The lower bound numpy array on concentrations
-    :type c_L: numpy.array
-    :param c_U:  The upper bound numpy array on concentrations
-    :type c_U: numpy.array
-    :param v_L:  The lower bound numpy array on fluxes
-    :type v_L: numpy.array
-    :param v_U:  The upper bound numpy array on fluxes
-    :type v_U: numpy.array
-    :param initial_log_c: The initial log concentrations (perhaps computed from convex mentos) numpy array
-    :type initial_log_c: numpy.array
-    :param initial_forward_rate: The initial forward rate (perhaps computed from convex mentos) numpy array
-    :type initial_forward_rate: numpy.array
-    :param initial_backward_rate: The initial backward rate (perhaps computed from convex mentos) numpy array
-    :type initial_backward_rate: numpy.array
-    :param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)
-    :type obj: function of 1 argument that returns the value of f(x), g(x), fail
-    :param biomass_rxn: The name of the biomass reaction in the fullS dataframe.
-    :type biomass_rxn: string
-    :return: reports for metabolite-sized data and reaction-sized data
-    :rtype:  tuple of pandas.DataFrame
+    The arguments to this function are as follows
+
+:param fullS:  The stoichometric matrix data frame object containing all metabolites
+:type fullS: pandas.DataFrame with reactions as columns and metabolites as row index
+:param S:  The stoichiometric matrix numpy matrix containing only those metabolites in steady state
+:type S: numpy.matrix
+:param deltaG0: The standard change in Gibbs free energy for all reactions
+:type deltaG0: numpy.array
+:param mu0: The standard chemical potential numpy array for all metabolites
+:type mu0: numpy.array
+:param c_L:  The lower bound numpy array on concentrations
+:type c_L: numpy.array
+:param c_U:  The upper bound numpy array on concentrations
+:type c_U: numpy.array
+:param v_L:  The lower bound numpy array on fluxes
+:type v_L: numpy.array
+:param v_U:  The upper bound numpy array on fluxes
+:type v_U: numpy.array
+:param initial_log_c: The initial log concentrations (perhaps computed from convex mentos) numpy array
+:type initial_log_c: numpy.array
+:param initial_forward_rate: The initial forward rate (perhaps computed from convex mentos) numpy array
+:type initial_forward_rate: numpy.array
+:param initial_backward_rate: The initial backward rate (perhaps computed from convex mentos) numpy array
+:type initial_backward_rate: numpy.array
+:param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)
+:type obj: function of 1 argument that returns the value of f(x), g(x), fail
+:param biomass_rxn: The name of the biomass reaction in the fullS dataframe.
+:type biomass_rxn: string
+:return: reports for metabolite-sized data and reaction-sized data
+:rtype:  tuple of pandas.DataFrame
     """
     m,n = fullS.shape
     mets = fullS.index

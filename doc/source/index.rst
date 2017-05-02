@@ -9,8 +9,12 @@ Welcome to MENTOS's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
+   mentos
+	     
+
+	      
 
 
 Indices and tables
