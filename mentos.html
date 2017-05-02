@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mentos package &mdash; MENTOS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="MENTOS 0.1 documentation" href="index.html" />
+    <link rel="prev" title="Welcome to MENTOS’s documentation!" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="mentos-package">
+<h1>mentos package<a class="headerlink" href="#mentos-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-mentos.mentos">
+<span id="mentos-mentos-module"></span><h2>mentos.mentos module<a class="headerlink" href="#module-mentos.mentos" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="mentos.mentos.run_mentos">
+<code class="descclassname">mentos.mentos.</code><code class="descname">run_mentos</code><span class="sig-paren">(</span><em>fullS</em>, <em>S</em>, <em>deltaG0</em>, <em>mu0</em>, <em>c_L</em>, <em>c_U</em>, <em>v_L</em>, <em>v_U</em>, <em>initial_log_c</em>, <em>initial_forward_rate</em>, <em>initial_backward_rate</em>, <em>obj</em>, <em>biomass_rxn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mentos/mentos.html#run_mentos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mentos.mentos.run_mentos" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div>run_mentos computes the nonconvex optimization using pyOpt.</div></blockquote>
+<div class="math">
+\[\begin{split}\underset{x}{\min} &amp; f(x) &amp; \end{split}\]\[\begin{split} &amp; g_j(x) = 0, &amp; j = 1, \ldots, m_e  \end{split}\]\[\begin{split} &amp; g_j(x) \leq 0, &amp; j = m_e + 1, \ldots, m  \end{split}\]\[\begin{split} &amp; x_{iL} \leq x_i \leq x_{iU}, &amp; i = 1,\ldots, n \end{split}\]</div>
+<p>where:</p>
+<blockquote>
+<div><ul class="simple">
+<li>x is the vector of design variables</li>
+<li>f(x) is a nonlinear function</li>
+<li>g(x) is a linear or nonlinear function</li>
+<li>n is the number of design variables</li>
+<li>m_e is the number of equality constraints</li>
+<li>m is the total number of constraints (number of equality constraints: m_i = m - m_e)</li>
+</ul>
+<p>The arguments to this function are as follows</p>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fullS</strong> (<em>pandas.DataFrame with reactions as columns and metabolites as row index</em>) &#8211; The stoichometric matrix data frame object containing all metabolites</li>
+<li><strong>S</strong> (<em>numpy.matrix</em>) &#8211; The stoichiometric matrix numpy matrix containing only those metabolites in steady state</li>
+<li><strong>deltaG0</strong> (<em>numpy.array</em>) &#8211; The standard change in Gibbs free energy for all reactions</li>
+<li><strong>mu0</strong> (<em>numpy.array</em>) &#8211; The standard chemical potential numpy array for all metabolites</li>
+<li><strong>c_L</strong> (<em>numpy.array</em>) &#8211; The lower bound numpy array on concentrations</li>
+<li><strong>c_U</strong> (<em>numpy.array</em>) &#8211; The upper bound numpy array on concentrations</li>
+<li><strong>v_L</strong> (<em>numpy.array</em>) &#8211; The lower bound numpy array on fluxes</li>
+<li><strong>v_U</strong> (<em>numpy.array</em>) &#8211; The upper bound numpy array on fluxes</li>
+<li><strong>initial_log_c</strong> (<em>numpy.array</em>) &#8211; The initial log concentrations (perhaps computed from convex mentos) numpy array</li>
+<li><strong>initial_forward_rate</strong> (<em>numpy.array</em>) &#8211; The initial forward rate (perhaps computed from convex mentos) numpy array</li>
+<li><strong>initial_backward_rate</strong> (<em>numpy.array</em>) &#8211; The initial backward rate (perhaps computed from convex mentos) numpy array</li>
+<li><strong>obj</strong> (<em>function of 1 argument that returns the value of f(x), g(x), fail</em>) &#8211; The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)</li>
+<li><strong>biomass_rxn</strong> (<em>string</em>) &#8211; The name of the biomass reaction in the fullS dataframe.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">reports for metabolite-sized data and reaction-sized data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple of pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-mentos">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mentos" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">mentos package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-mentos.mentos">mentos.mentos module</a></li>
+<li><a class="reference internal" href="#module-mentos">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to MENTOS&#8217;s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/mentos.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jeremy Zucker, Neeraj Kumar, Bill Cannon.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="_sources/mentos.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
