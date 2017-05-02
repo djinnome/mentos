@@ -19,8 +19,7 @@ setup(name='mentos',
       url='http://github.com/djinnome/mentos',
       author='Jeremy Zucker',
       author_email='djinnome@gmail.com',
-      install_requires=[
-       'pandas',        'scipy','cvxpy','numpy','cobra','python-libsbml','pyOpt'],
+      install_requires=['pandas','scipy','cvxpy','numpy','cobra','python-libsbml','pyOpt'],
       license='MIT',
       packages=['mentos'],
       zip_safe=False)

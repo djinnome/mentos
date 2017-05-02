@@ -8,7 +8,7 @@ mentos.mentos module
 --------------------
 
 .. automodule:: mentos.mentos
-    :members:
+    :members: run_mentos
     :undoc-members:
     :show-inheritance:
 
