@@ -1,0 +1,318 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mentos.mentos &mdash; MENTOS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="MENTOS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mentos.mentos</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pyOpt</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">entropy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="kn">as</span> <span class="nn">cvx</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cobra</span>
+
+
+<span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">float_format</span> <span class="o">=</span> <span class="s1">&#39;{:.3g}&#39;</span><span class="o">.</span><span class="n">format</span>
+
+<span class="k">def</span> <span class="nf">predict_log_likelihoods</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">mu0</span><span class="p">,</span> <span class="n">uptake_met_concs</span><span class="p">,</span> <span class="n">excreted_met_concs</span> <span class="p">):</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">n</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">rxns</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">columns</span>
+    <span class="n">mets</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">index</span>
+    <span class="n">log_c</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+    <span class="n">log_likelihood</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">deltaG0</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">mu0</span><span class="p">)</span>
+    <span class="n">log_Q</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">log_c</span>
+    <span class="n">log_K</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="p">))</span><span class="o">*</span><span class="n">deltaG0</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="o">*</span><span class="n">log_c</span> <span class="o">+</span> <span class="n">mu0</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="n">uptake_met_indices</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">uptake_met_concs</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="n">excreted_met_indices</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">excreted_met_concs</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">sum_entries</span><span class="p">(</span> <span class="n">cvx</span><span class="o">.</span><span class="n">entr</span><span class="p">(</span> <span class="n">log_likelihood</span> <span class="p">)))</span>
+    <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">log_c</span><span class="p">[</span><span class="n">uptake_met_indices</span><span class="p">]</span> <span class="o">==</span> <span class="n">uptake_met_concs</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                   <span class="n">log_c</span><span class="p">[</span><span class="n">excreted_met_indices</span><span class="p">]</span> <span class="o">==</span> <span class="n">excreted_met_concs</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+
+                   <span class="n">log_likelihood</span> <span class="o">==</span> <span class="n">log_K</span> <span class="o">-</span> <span class="n">log_Q</span><span class="p">,</span>
+
+                   <span class="n">mu</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">excreted_met_indices</span><span class="p">]),</span>
+                   <span class="n">mu</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">uptake_met_indicies</span><span class="p">])</span>
+                   <span class="p">]</span>
+    <span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
+    <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">log_c</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">mets</span><span class="p">),</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">log_likelihood</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">get_rxn_bounds_from_log_likelihood</span><span class="p">(</span> <span class="n">log_likelihood</span> <span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">log_likelihood</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="n">zero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">ll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">log_likelihood</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_likelihood</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;lower_bound&#39;</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">ll</span><span class="p">,</span> <span class="n">zero</span><span class="p">),</span> <span class="s1">&#39;upper_bound&#39;</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">ll</span><span class="p">,</span> <span class="n">zero</span><span class="p">)},</span> <span class="n">index</span><span class="o">=</span><span class="n">log_likelihood</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">predict_fluxes</span><span class="p">(</span> <span class="n">S</span><span class="p">,</span> <span class="n">rxn_bounds</span><span class="p">,</span> <span class="n">biomass</span> <span class="p">):</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">n</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span> <span class="n">v</span><span class="p">[</span><span class="n">S</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">biomass</span><span class="p">)]</span> <span class="p">)</span>
+    <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">S</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span><span class="o">*</span><span class="n">v</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                   <span class="n">rxn_bounds</span><span class="p">[</span><span class="s1">&#39;lower&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">&lt;=</span> <span class="n">v</span><span class="p">,</span>
+                   <span class="n">v</span> <span class="o">&lt;=</span> <span class="n">rxn_bounds</span><span class="p">[</span><span class="s1">&#39;upper&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="p">]</span>
+    <span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
+    <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">S</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+                      
+
+                   
+<span class="k">def</span> <span class="nf">make_variables</span><span class="p">(</span> <span class="n">x</span><span class="p">,</span> <span class="n">fullS</span><span class="p">,</span> <span class="n">mu0</span><span class="p">,</span> <span class="n">deltaG0</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">T</span> <span class="p">):</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">n</span> <span class="o">=</span> <span class="n">fullS</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">log_c</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">m</span><span class="p">]</span>
+    <span class="n">forward_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">m</span><span class="p">:</span><span class="n">m</span><span class="o">+</span><span class="n">n</span><span class="p">])</span>
+    <span class="n">backward_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">m</span><span class="o">+</span><span class="n">n</span><span class="p">:</span><span class="n">m</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">])</span>
+    <span class="n">log_Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">fullS</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">log_c</span><span class="p">)</span>   <span class="c1"># log of the Reaction quotient</span>
+    <span class="n">log_K</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="p">)</span><span class="o">*</span><span class="n">deltaG0</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span> 
+    <span class="n">forward_likelihood</span> <span class="o">=</span> <span class="n">forward_rate</span><span class="o">/</span><span class="n">backward_rate</span>
+    <span class="n">backward_likelihood</span> <span class="o">=</span> <span class="n">backward_rate</span><span class="o">/</span><span class="n">forward_rate</span>
+    <span class="n">total_likelihood</span> <span class="o">=</span> <span class="n">forward_likelihood</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">+</span> <span class="n">backward_likelihood</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">forward_probability</span> <span class="o">=</span> <span class="n">forward_likelihood</span><span class="o">/</span><span class="n">total_likelihood</span>
+    <span class="n">backward_probability</span><span class="o">=</span> <span class="n">backward_likelihood</span><span class="o">/</span><span class="n">total_likelihood</span>
+    <span class="n">sign</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">forward_likelihood</span><span class="p">))</span>
+    <span class="n">thermodynamic_driving_force</span> <span class="o">=</span> <span class="n">sign</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">forward_likelihood</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+    <span class="n">net_flux</span> <span class="o">=</span> <span class="n">forward_rate</span> <span class="o">-</span> <span class="n">backward_rate</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mu0</span> <span class="o">+</span> <span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="o">*</span><span class="n">log_c</span>
+    <span class="k">return</span> <span class="n">log_c</span><span class="p">,</span> <span class="n">forward_rate</span><span class="p">,</span> <span class="n">backward_rate</span><span class="p">,</span> <span class="n">log_Q</span><span class="p">,</span> <span class="n">log_K</span><span class="p">,</span> <span class="n">forward_likelihood</span><span class="p">,</span> <span class="n">backward_likelihood</span><span class="p">,</span> \
+    <span class="n">forward_probability</span><span class="p">,</span> <span class="n">backward_probability</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">thermodynamic_driving_force</span><span class="p">,</span> <span class="n">net_flux</span>
+
+
+
+<span class="k">def</span> <span class="nf">generate_metabolite_report</span><span class="p">(</span> <span class="n">log_c</span><span class="p">,</span> <span class="n">forward_rate</span><span class="p">,</span> <span class="n">backward_rate</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">metabolites</span><span class="p">,</span> <span class="n">internal_mets</span><span class="p">,</span> <span class="n">mu0</span><span class="p">)</span> <span class="p">:</span>
+    <span class="n">n_A</span> <span class="o">=</span> <span class="mf">6.022e23</span>       <span class="c1"># Avogadros number</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="mf">1e-15</span>            <span class="c1"># Volume of cell in Liters</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="mf">8.3144598</span><span class="o">/</span><span class="mf">1000.0</span> <span class="c1"># ideal gas constant</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="mf">298.15</span>           <span class="c1"># standard temperature in Kelvin</span>
+    <span class="n">forward_likelihood</span> <span class="o">=</span> <span class="n">forward_rate</span><span class="o">/</span><span class="n">backward_rate</span>
+    <span class="n">backward_likelihood</span> <span class="o">=</span> <span class="n">backward_rate</span><span class="o">/</span><span class="n">forward_rate</span>
+    <span class="n">net_flux</span> <span class="o">=</span> <span class="n">forward_rate</span> <span class="o">-</span> <span class="n">backward_rate</span>
+    <span class="n">mets</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">n_A</span><span class="o">*</span><span class="n">V</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_c</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">metabolites</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Counts&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;Concentrations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_c</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">metabolites</span><span class="p">)</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;Log Concentrations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">log_c</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">metabolites</span><span class="p">)</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;Standard Chemical potential&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu0</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;Chemical potential&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu0</span> <span class="o">+</span> <span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="o">*</span><span class="n">log_c</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;S*forward_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">,</span><span class="n">forward_rate</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span> <span class="n">internal_mets</span><span class="p">)</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;S*backward_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">,</span><span class="n">backward_rate</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">internal_mets</span><span class="p">)</span>
+    <span class="n">mets</span><span class="p">[</span><span class="s1">&#39;S*net_flux&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">,</span><span class="n">net_flux</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">internal_mets</span><span class="p">)</span>
+    <span class="c1">#mets[&#39;Steady state constraints&#39;] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)</span>
+    <span class="k">return</span> <span class="n">mets</span>
+
+<span class="k">def</span> <span class="nf">generate_rxn_report</span><span class="p">(</span><span class="n">metabolites</span><span class="p">,</span> <span class="n">log_c</span><span class="p">,</span> <span class="n">log_Q</span><span class="p">,</span> <span class="n">log_K</span><span class="p">,</span><span class="n">forward_rate</span><span class="p">,</span> <span class="n">backward_rate</span><span class="p">,</span> <span class="n">rxns</span><span class="p">,</span> <span class="n">deltaG0</span><span class="p">,</span> <span class="n">biomass_rxn</span><span class="p">):</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="mf">8.3144598</span><span class="o">/</span><span class="mf">1000.0</span> <span class="c1"># ideal gas constant</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="mf">298.15</span>           <span class="c1"># standard temperature in Kelvin</span>
+    <span class="n">n_A</span> <span class="o">=</span> <span class="mf">6.022e23</span>       <span class="c1"># Avogadros number</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="mf">1e-15</span>            <span class="c1"># Volume of cell in Liters</span>
+    <span class="n">forward_likelihood</span> <span class="o">=</span> <span class="n">forward_rate</span><span class="o">/</span><span class="n">backward_rate</span>
+    <span class="n">backward_likelihood</span> <span class="o">=</span> <span class="n">backward_rate</span><span class="o">/</span><span class="n">forward_rate</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">forward_likelihood</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Forward likelihoods&#39;</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward likelihoods&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">backward_likelihood</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span> <span class="c1">#/np.log(df[&#39;Rxn likelihoods&#39;]).sum()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Delta G&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">((</span><span class="n">log_K</span> <span class="o">-</span> <span class="n">log_Q</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="c1">#df[&#39;Q_r&#39;] = pd.DataFrame(np.exp(log_Q.value),index=rxns)</span>
+    <span class="c1">#df[&#39;K_eq&#39;] = pd.DataFrame(np.exp(log_K.value),index=rxns)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;log Q_r&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">log_Q</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;log K_eq&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">log_K</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Delta G0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">deltaG0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;logK - logQ&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log_K</span> <span class="o">-</span> <span class="n">log_Q</span> <span class="c1">#/np.log(df[&#39;Rxn likelihoods&#39;]).sum()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;logQ - logK&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log_Q</span> <span class="o">-</span> <span class="n">log_K</span> <span class="c1">#/np.log(df[&#39;Rxn likelihoods&#39;]).sum()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Log likelihoods&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">forward_likelihood</span><span class="p">)</span> <span class="c1">#/np.log(df[&#39;Rxn likelihoods&#39;]).sum()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Log likelihoods&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">backward_likelihood</span><span class="p">)</span><span class="c1">#/np.log(df[&#39;Rxn likelihoods&#39;]).sum()</span>
+
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward probabilities&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">forward_likelihood</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">forward_likelihood</span> <span class="o">+</span> <span class="n">backward_likelihood</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward probabilities&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">backward_likelihood</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">forward_likelihood</span> <span class="o">+</span> <span class="n">backward_likelihood</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net probabilities&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward probabilities&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward probabilities&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net likelihoods&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward likelihoods&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward likelihoods&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">forward_rate</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span> <span class="n">backward_rate</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">rxns</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward rate&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward rate&#39;</span><span class="p">]</span>
+    <span class="c1">#df[&#39;Forward likelihood constraints&#39;] = pd.DataFrame(constraints[0].dual_value, index=rxns)</span>
+    <span class="c1">#df[&#39;Backward likelihood constraints&#39;] = pd.DataFrame(constraints[1].dual_value, index=rxns)</span>
+    
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward probabilities&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward probabilities&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward probabilities&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward probabilities&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Reaction Entropy Production&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Microscopic Reaction Entropy Production Rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward rate&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward rate&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Microscopic Reaction Entropy Production Net Flux&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Microscopic Reaction Entropy Production Net Flux Difference&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Total Entropy Production&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Reaction Entropy Production&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Total Microscopic Entropy Production Rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Microscopic Reaction Entropy Production Net Flux&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Total Microscopic Entropy Production Rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Microscopic Reaction Entropy Production Net Flux&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Macroscopic Reaction Entropy Production Net Flux&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">biomass_rxn</span><span class="p">,</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">biomass_rxn</span><span class="p">,</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Macroscopic Reaction Entropy Production Net Flux Difference&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Forward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">biomass_rxn</span><span class="p">,</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Backward Entropy Production&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">biomass_rxn</span><span class="p">,</span><span class="s1">&#39;Net flux&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Total Macroscopic Entropy Production Net Flux&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Macroscopic Reaction Entropy Production Net Flux&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Total Macroscopic Entropy Production Net Flux Difference&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;Macroscopic Reaction Entropy Production Net Flux Difference&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    
+    <span class="k">return</span> <span class="n">df</span>
+
+
+<div class="viewcode-block" id="run_mentos"><a class="viewcode-back" href="../../index.html#mentos.mentos.run_mentos">[docs]</a><span class="k">def</span> <span class="nf">run_mentos</span><span class="p">(</span><span class="n">fullS</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">deltaG0</span><span class="p">,</span> <span class="n">mu0</span><span class="p">,</span> <span class="n">c_L</span><span class="p">,</span> <span class="n">c_U</span><span class="p">,</span> <span class="n">v_L</span><span class="p">,</span> <span class="n">v_U</span><span class="p">,</span><span class="n">initial_log_c</span><span class="p">,</span><span class="n">initial_forward_rate</span><span class="p">,</span> <span class="n">initial_backward_rate</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">biomass_rxn</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    run_mentos computes the nonconvex optimization using pyOpt.  </span>
+<span class="sd">.. math::</span>
+<span class="sd">    \underset{x}{\min} &amp; f(x) &amp; </span>
+
+<span class="sd">     &amp; g_j(x) = 0, &amp; j = 1, \ldots, m_e  </span>
+
+<span class="sd">     &amp; g_j(x) \leq 0, &amp; j = m_e + 1, \ldots, m  </span>
+
+<span class="sd">     &amp; x_{iL} \leq x_i \leq x_{iU}, &amp; i = 1,\ldots, n </span>
+
+
+<span class="sd">where:</span>
+
+<span class="sd">    * x is the vector of design variables</span>
+<span class="sd">    * f(x) is a nonlinear function</span>
+<span class="sd">    * g(x) is a linear or nonlinear function</span>
+<span class="sd">    * n is the number of design variables</span>
+<span class="sd">    * m_e is the number of equality constraints</span>
+<span class="sd">    * m is the total number of constraints (number of equality constraints: m_i = m - m_e)</span>
+
+<span class="sd">    The arguments to this function are as follows</span>
+
+<span class="sd">:param fullS:  The stoichometric matrix data frame object containing all metabolites</span>
+<span class="sd">:type fullS: pandas.DataFrame with reactions as columns and metabolites as row index</span>
+<span class="sd">:param S:  The stoichiometric matrix numpy matrix containing only those metabolites in steady state</span>
+<span class="sd">:type S: numpy.matrix</span>
+<span class="sd">:param deltaG0: The standard change in Gibbs free energy for all reactions</span>
+<span class="sd">:type deltaG0: numpy.array</span>
+<span class="sd">:param mu0: The standard chemical potential numpy array for all metabolites</span>
+<span class="sd">:type mu0: numpy.array</span>
+<span class="sd">:param c_L:  The lower bound numpy array on concentrations</span>
+<span class="sd">:type c_L: numpy.array</span>
+<span class="sd">:param c_U:  The upper bound numpy array on concentrations</span>
+<span class="sd">:type c_U: numpy.array</span>
+<span class="sd">:param v_L:  The lower bound numpy array on fluxes</span>
+<span class="sd">:type v_L: numpy.array</span>
+<span class="sd">:param v_U:  The upper bound numpy array on fluxes</span>
+<span class="sd">:type v_U: numpy.array</span>
+<span class="sd">:param initial_log_c: The initial log concentrations (perhaps computed from convex mentos) numpy array</span>
+<span class="sd">:type initial_log_c: numpy.array</span>
+<span class="sd">:param initial_forward_rate: The initial forward rate (perhaps computed from convex mentos) numpy array</span>
+<span class="sd">:type initial_forward_rate: numpy.array</span>
+<span class="sd">:param initial_backward_rate: The initial backward rate (perhaps computed from convex mentos) numpy array</span>
+<span class="sd">:type initial_backward_rate: numpy.array</span>
+<span class="sd">:param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)</span>
+<span class="sd">:type obj: function of 1 argument that returns the value of f(x), g(x), fail</span>
+<span class="sd">:param biomass_rxn: The name of the biomass reaction in the fullS dataframe.</span>
+<span class="sd">:type biomass_rxn: string</span>
+<span class="sd">:return: reports for metabolite-sized data and reaction-sized data</span>
+<span class="sd">:rtype:  tuple of pandas.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">n</span> <span class="o">=</span> <span class="n">fullS</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">mets</span> <span class="o">=</span> <span class="n">fullS</span><span class="o">.</span><span class="n">index</span>
+    <span class="n">rxns</span> <span class="o">=</span> <span class="n">fullS</span><span class="o">.</span><span class="n">columns</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">mentos</span> <span class="o">=</span> <span class="n">pyOpt</span><span class="o">.</span><span class="n">Optimization</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span><span class="n">obj</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addObj</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addVarGroup</span><span class="p">(</span><span class="s1">&#39;log_c&#39;</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">initial_log_c</span><span class="p">,</span> 
+                       <span class="n">lower</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">c_L</span><span class="p">),</span> <span class="n">upper</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">c_U</span><span class="p">))</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addVarGroup</span><span class="p">(</span><span class="s1">&#39;forward_rates&#39;</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">initial_forward_rate</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addVarGroup</span><span class="p">(</span><span class="s1">&#39;backward_rates&#39;</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">initial_backward_rate</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;steady_state_flux&#39;</span><span class="p">,</span><span class="n">ncons</span><span class="o">=</span><span class="n">i</span><span class="p">,</span><span class="nb">type</span><span class="o">=</span><span class="s1">&#39;e&#39;</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;thermodynamics&#39;</span><span class="p">,</span> <span class="n">ncons</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;e&#39;</span><span class="p">)</span>
+
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;boundary_conditions&#39;</span><span class="p">,</span> <span class="n">ncons</span><span class="o">=</span><span class="n">m</span><span class="o">-</span><span class="n">i</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;e&#39;</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;energy_barrier&#39;</span><span class="p">,</span><span class="n">ncons</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;i&#39;</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;energy_sink&#39;</span><span class="p">,</span><span class="n">ncons</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;i&#39;</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;flux_lower_bounds&#39;</span><span class="p">,</span><span class="n">ncons</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;i&#39;</span><span class="p">,</span><span class="n">lower</span><span class="o">=</span><span class="n">v_L</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">v_U</span><span class="p">)</span>
+    <span class="n">mentos</span><span class="o">.</span><span class="n">addConGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;flux_upper_bounds&#39;</span><span class="p">,</span><span class="n">ncons</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;i&#39;</span><span class="p">,</span><span class="n">lower</span><span class="o">=</span><span class="n">v_L</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">v_U</span><span class="p">)</span>
+
+    <span class="n">opt</span> <span class="o">=</span> <span class="n">pyOpt</span><span class="o">.</span><span class="n">PSQP</span><span class="p">()</span>
+    <span class="n">f_star</span><span class="p">,</span> <span class="n">x_star</span><span class="p">,</span> <span class="n">message</span> <span class="o">=</span> <span class="n">opt</span><span class="p">(</span><span class="n">mentos</span><span class="p">,</span> <span class="n">sens_type</span><span class="o">=</span><span class="s1">&#39;FD&#39;</span><span class="p">,</span> <span class="n">disp_opts</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sens_mode</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">log_c</span> <span class="o">=</span> <span class="n">x_star</span><span class="p">[:</span><span class="n">m</span><span class="p">]</span>
+    <span class="n">forward_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x_star</span><span class="p">[</span><span class="n">m</span><span class="p">:</span><span class="n">m</span><span class="o">+</span><span class="n">n</span><span class="p">])</span>
+    <span class="n">backward_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x_star</span><span class="p">[</span><span class="n">m</span><span class="o">+</span><span class="n">n</span><span class="p">:</span><span class="n">m</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">])</span>
+    <span class="n">log_Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">fullS</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">log_c</span><span class="p">)</span>   <span class="c1"># log of the Reaction quotient</span>
+    <span class="n">log_K</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="p">)</span><span class="o">*</span><span class="n">deltaG0</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span> 
+    <span class="n">metab</span> <span class="o">=</span> <span class="n">generate_metabolite_report</span><span class="p">(</span><span class="n">log_c</span><span class="p">,</span> <span class="n">forward_rate</span><span class="p">,</span> <span class="n">backward_rate</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">mets</span><span class="p">,</span> <span class="n">internal_mets</span><span class="p">,</span> <span class="n">mu0</span> <span class="p">)</span>
+    <span class="n">reactions</span> <span class="o">=</span> <span class="n">generate_rxn_report</span><span class="p">(</span><span class="n">mets</span><span class="p">,</span> <span class="n">log_c</span><span class="p">,</span> <span class="n">log_Q</span><span class="p">,</span> <span class="n">log_K</span><span class="p">,</span><span class="n">forward_rate</span><span class="p">,</span> 
+                                                <span class="n">backward_rate</span><span class="p">,</span> <span class="n">rxns</span><span class="p">,</span> <span class="n">deltaG0</span><span class="p">,</span> <span class="n">biomass_rxn</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">metab</span><span class="p">,</span> <span class="n">reactions</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jeremy Zucker, Neeraj Kumar, Bill Cannon.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
