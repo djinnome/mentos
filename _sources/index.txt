@@ -11,6 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+.. include:: mentos.rst
+.. include:: modules.rst
+	      
 
 
 Indices and tables

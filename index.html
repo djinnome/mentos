@@ -25,6 +25,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="MENTOS 0.1 documentation" href="#" />
+    <link rel="next" title="mentos package" href="mentos.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -42,6 +43,81 @@
 <p>Contents:</p>
 <div class="toctree-wrapper compound">
 <ul class="simple">
+</ul>
+</div>
+</div>
+<div class="section" id="mentos-package">
+<h1>mentos package<a class="headerlink" href="#mentos-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-mentos.mentos">
+<span id="mentos-mentos-module"></span><h2>mentos.mentos module<a class="headerlink" href="#module-mentos.mentos" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="mentos.mentos.run_mentos">
+<code class="descclassname">mentos.mentos.</code><code class="descname">run_mentos</code><span class="sig-paren">(</span><em>fullS</em>, <em>S</em>, <em>deltaG0</em>, <em>mu0</em>, <em>c_L</em>, <em>c_U</em>, <em>v_L</em>, <em>v_U</em>, <em>initial_log_c</em>, <em>initial_forward_rate</em>, <em>initial_backward_rate</em>, <em>obj</em>, <em>biomass_rxn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mentos/mentos.html#run_mentos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mentos.mentos.run_mentos" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div>run_mentos computes the nonconvex optimization using pyOpt.</div></blockquote>
+<div class="math">
+\[\begin{split}\underset{x}{\min} &amp; f(x) &amp; \end{split}\]\[\begin{split} &amp; g_j(x) = 0, &amp; j = 1, \ldots, m_e  \end{split}\]\[\begin{split} &amp; g_j(x) \leq 0, &amp; j = m_e + 1, \ldots, m  \end{split}\]\[\begin{split} &amp; x_{iL} \leq x_i \leq x_{iU}, &amp; i = 1,\ldots, n \end{split}\]</div>
+<p>where:</p>
+<blockquote>
+<div><ul class="simple">
+<li>x is the vector of design variables</li>
+<li>f(x) is a nonlinear function</li>
+<li>g(x) is a linear or nonlinear function</li>
+<li>n is the number of design variables</li>
+<li>m_e is the number of equality constraints</li>
+<li>m is the total number of constraints (number of equality constraints: m_i = m - m_e)</li>
+</ul>
+<p>The arguments to this function are as follows</p>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fullS</strong> (<em>pandas.DataFrame with reactions as columns and metabolites as row index</em>) &#8211; The stoichometric matrix data frame object containing all metabolites</li>
+<li><strong>S</strong> (<em>numpy.matrix</em>) &#8211; The stoichiometric matrix numpy matrix containing only those metabolites in steady state</li>
+<li><strong>deltaG0</strong> (<em>numpy.array</em>) &#8211; The standard change in Gibbs free energy for all reactions</li>
+<li><strong>mu0</strong> (<em>numpy.array</em>) &#8211; The standard chemical potential numpy array for all metabolites</li>
+<li><strong>c_L</strong> (<em>numpy.array</em>) &#8211; The lower bound numpy array on concentrations</li>
+<li><strong>c_U</strong> (<em>numpy.array</em>) &#8211; The upper bound numpy array on concentrations</li>
+<li><strong>v_L</strong> (<em>numpy.array</em>) &#8211; The lower bound numpy array on fluxes</li>
+<li><strong>v_U</strong> (<em>numpy.array</em>) &#8211; The upper bound numpy array on fluxes</li>
+<li><strong>initial_log_c</strong> (<em>numpy.array</em>) &#8211; The initial log concentrations (perhaps computed from convex mentos) numpy array</li>
+<li><strong>initial_forward_rate</strong> (<em>numpy.array</em>) &#8211; The initial forward rate (perhaps computed from convex mentos) numpy array</li>
+<li><strong>initial_backward_rate</strong> (<em>numpy.array</em>) &#8211; The initial backward rate (perhaps computed from convex mentos) numpy array</li>
+<li><strong>obj</strong> (<em>function of 1 argument that returns the value of f(x), g(x), fail</em>) &#8211; The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)</li>
+<li><strong>biomass_rxn</strong> (<em>string</em>) &#8211; The name of the biomass reaction in the fullS dataframe.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">reports for metabolite-sized data and reaction-sized data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple of pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-mentos">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mentos" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+<div class="section" id="mentos">
+<h1>mentos<a class="headerlink" href="#mentos" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mentos.html">mentos package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mentos.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mentos.html#module-mentos.mentos">mentos.mentos module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mentos.html#module-mentos">Module contents</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -63,12 +139,20 @@
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to MENTOS&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#mentos-package">mentos package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-mentos.mentos">mentos.mentos module</a></li>
+<li><a class="reference internal" href="#module-mentos">Module contents</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#mentos">mentos</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="mentos.html" title="next chapter">mentos package</a></li>
   </ul></li>
 </ul>
 </div>
