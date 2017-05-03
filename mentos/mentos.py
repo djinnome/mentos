@@ -145,7 +145,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     return df
 
 
-def run_mentos(fullS, S, deltaG0, mu0, c_L, c_U, v_L, v_U,initial_log_c,initial_forward_rate, initial_backward_rate, obj, biomass_rxn ):
+def run_mentos(fullS, S, internal_mets, deltaG0, mu0, c_L, c_U, v_L, v_U,initial_log_c,initial_forward_rate, initial_backward_rate, obj, biomass_rxn, R = 8.3144598/1000.0,T = 298.15):
     """
     run_mentos computes the nonconvex optimization using pyOpt.  
 .. math::
