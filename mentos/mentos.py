@@ -53,11 +53,7 @@ def predict_fluxes( S, rxn_bounds, biomass ):
     prob = cvx.Problem(obj, constraints)
     prob.solve( verbose=True)
     return pd.DataFrame(v.value, index=S.columns)
-
-                      
-
-                   
-def make_variables( x, fullS, mu0, deltaG0, R, T ):
+def make_variables( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): # ideal gas constant in cals/mol ):
     m,n = fullS.shape
     log_c = x[:m]
     forward_rate = np.abs(x[m:m+n])
@@ -78,10 +74,10 @@ def make_variables( x, fullS, mu0, deltaG0, R, T ):
 
 
 
-def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0,     T = 298.15,     V = 1e-15  ) :
+def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0,     T = 298.15,     V = 1e-15,     R = 8.3144598/1000.0  ) :
     n_A = 6.022e23       # Avogadros number
 
-    R = 8.3144598/1000.0 # ideal gas constant
+
 
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
@@ -97,8 +93,8 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets
 
-def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15):
-    R = 8.3144598/1000.0 # ideal gas constant
+def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
+ # ideal gas constant
     n_A = 6.022e23       # Avogadros number
 
     forward_likelihood = forward_rate/backward_rate
