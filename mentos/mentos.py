@@ -78,11 +78,11 @@ def make_variables( x, fullS, mu0, deltaG0, R, T ):
 
 
 
-def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0) :
+def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0,     T = 298.15,     V = 1e-15  ) :
     n_A = 6.022e23       # Avogadros number
-    V = 1e-15            # Volume of cell in Liters
+
     R = 8.3144598/1000.0 # ideal gas constant
-    T = 298.15           # standard temperature in Kelvin
+
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
     net_flux = forward_rate - backward_rate
@@ -97,11 +97,10 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets
 
-def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn):
+def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15):
     R = 8.3144598/1000.0 # ideal gas constant
-    T = 298.15           # standard temperature in Kelvin
     n_A = 6.022e23       # Avogadros number
-    V = 1e-15            # Volume of cell in Liters
+
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
     df = pd.DataFrame(forward_likelihood,index=rxns, columns=['Forward likelihoods'])
