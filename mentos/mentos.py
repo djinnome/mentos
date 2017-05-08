@@ -37,10 +37,11 @@ def predict_log_likelihoods(S, R, T, mu0, uptake_met_concs, excreted_met_concs )
     return pd.DataFrame(log_c.value, index=mets), pd.DataFrame(log_likelihood.value, index=rxns)
 
 def get_rxn_bounds_from_log_likelihood( log_likelihood ):
-    n = len(log_likelihood.index)
+    n = len(log_likelihood)
     zero = np.squeeze(np.zeros((n,1)))
-    ll = np.sign(log_likelihood.values)*np.exp(log_likelihood.values)
-    return pd.DataFrame({'lower_bound':np.minimum(ll, zero), 'upper_bound':np.maximum(ll, zero)}, index=log_likelihood.index)
+    thermodynamic_driving_force =  np.sign(log_likelihood)*np.power(np.exp(log_likelihood), np.sign(log_likelihood))
+    return np.minimum(thermodynamic_driving_force, -1) + 1, np.maximum(thermodynamic_driving_force, 1) - 1
+ 
 
 
 def predict_fluxes( S, rxn_bounds, biomass ):
@@ -224,3 +225,5 @@ where:
     reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
+
+    
