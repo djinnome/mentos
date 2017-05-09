@@ -119,6 +119,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     df['Net likelihoods'] = df['Forward likelihoods'] - df['Backward likelihoods']
     df['Forward rate'] = pd.Series(forward_rate, index=rxns)
     df['Backward rate'] = pd.Series( backward_rate, index=rxns)
+    df['Thermodynamic driving force'] = sign*np.power(forward_likelihood, sign)
     df['Net flux'] = df['Forward rate'] - df['Backward rate']
     #df['Forward likelihood constraints'] = pd.DataFrame(constraints[0].dual_value, index=rxns)
     #df['Backward likelihood constraints'] = pd.DataFrame(constraints[1].dual_value, index=rxns)
