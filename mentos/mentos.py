@@ -227,3 +227,8 @@ where:
     return metab, reactions
 
     
+def compare_frames(left, right):
+    return left[pd.DataFrame(
+        np.isclose(left, right ),
+        index=left.index
+        columns=left.columns)].T
