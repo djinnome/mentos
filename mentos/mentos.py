@@ -92,7 +92,7 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
     mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
-    return mets
+    return mets.astype(np.float64)
 
 def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
  # ideal gas constant
