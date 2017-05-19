@@ -1,4 +1,8 @@
-import pyOpt
+try:
+    import pyopt
+except ImportError:
+    import pyOpt as pyopt
+    
 from scipy.stats import entropy
 import numpy as np
 import cvxpy as cvx
@@ -197,7 +201,7 @@ where:
     mets = fullS.index
     rxns = fullS.columns
     i, n = S.shape
-    mentos = pyOpt.Optimization(obj.__name__,obj)
+    mentos = pyopt.Optimization(obj.__name__,obj)
     mentos.addObj('f')
     mentos.addVarGroup('log_c', m, type='c', value=initial_log_c, 
                        lower=np.log(c_L), upper=np.log(c_U))
@@ -213,7 +217,7 @@ where:
     mentos.addConGroup(name='flux_lower_bounds',ncons=n, type='i',lower=v_L, upper=v_U)
     mentos.addConGroup(name='flux_upper_bounds',ncons=n, type='i',lower=v_L, upper=v_U)
 
-    opt = pyOpt.PSQP()
+    opt = pyopt.PSQP()
     f_star, x_star, message = opt(mentos, sens_type='FD', disp_opts=True, sens_mode='')
     log_c = x_star[:m]
     forward_rate = np.abs(x_star[m:m+n])
