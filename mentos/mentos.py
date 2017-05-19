@@ -77,9 +77,6 @@ def make_variables( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): 
 
 def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0,     T = 298.15,     V = 1e-15,     R = 8.3144598/1000.0  ) :
     n_A = 6.022e23       # Avogadros number
-
-
-
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
     net_flux = forward_rate - backward_rate
