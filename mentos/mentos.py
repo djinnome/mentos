@@ -12,12 +12,47 @@ pd.options.display.float_format = '{:.3g}'.format
 
 
 def get_rates_from_log_likelihood_and_flux(v, log_likelihood):
+    """
+From the definition of forward likelihood and net flux:
+
+.. math::
+    \begin{eqnarray}
+    L_+ &=& \frac{r_{+}}{r_{-}} \\
+    v &=& r_{+} - r_{-} \\
+    \end{eqnarray}$$
+
+We can solve for the forward reaction rates :math:`r_{+}$ and $r_{-}`:
+
+.. math::
+    \begin{eqnarray}
+    r_{-} & = & \frac{r_{+}}{L_+} \\
+    r_{+}  - r_{-} & = & v\\
+    r_{+} - \frac{r_{+}}{L_+} & = & v \\
+    r_{+}(1 -\frac{1}{L_+}) & = & v \\
+    r_{+} & = & \frac{v}{1-\frac{1}{L_+}} \\
+       & = & \frac{L_+v}{L_+ - 1} \\
+    r_{-} & = & \frac{v}{L_+ - 1}  \\
+    \end{eqnarray}
+
+"""
     net_flux = np.squeeze(np.asarray(v.value))
     forward_likelihood = np.exp(np.squeeze(np.asarray(log_likelihood.value)))
     net_flux, forward_likelihood
     forward_rate = net_flux*forward_likelihood/(forward_likelihood - 1)
     backward_rate = net_flux/(forward_likelihood - 1)
     return forward_rate, backward_rate
+
+def getMetBounds( S,fluxes, c_L, c_U, ext=r'_ext?'):
+    """Set external uptake metabolites to upper bound concentration.
+    Set external eflux metabolites to lower bound concentration
+    if flux * stoichiometric coefficient is negative, then it is an uptake metabolite
+    if flux * stoichiometric coefficient is positive, then it is an efflux metabolite"""
+    external_mets = S.loc[S.index.str.contains(ext)].dot(fluxes).squeeze()
+    met_bounds = pd.Series(index=external_mets.index)
+
+    met_bounds[external_mets < 0] = c_U
+    met_bounds[external_mets >  0] = c_L
+    return met_bounds
 
 def predict_log_likelihoods(S, R, T, mu0, uptake_met_concs, excreted_met_concs ):
     m,n = S.shape
