@@ -11,7 +11,18 @@ import cobra
 pd.options.display.float_format = '{:.3g}'.format
 
 
-def get_rates_from_log_likelihood_and_flux(v, log_likelihood):
+def cvx2a( matrix ):
+    """
+    cvx variable or value to ndarray
+    """
+    if type(matrix) is cvxpy.expressions.variables.variable.Variable:
+        return np.squeeze(np.asarray(matrix.value))
+    elif type(matrix) is np.matrixlib.defmatrix.matrix:
+        return np.squeeze(np.asarray(matrix))
+    else: # if array-like
+        return np.squeeze(matrix)
+
+def get_rates_from_log_likelihood_and_flux( log_likelihood, v):
     """
 From the definition of forward likelihood and net flux:
 
@@ -35,9 +46,9 @@ We can solve for the forward reaction rates :math:`r_{+}$ and $r_{-}`:
     \end{eqnarray}
 
 """
-    net_flux = np.squeeze(np.asarray(v.value))
-    forward_likelihood = np.exp(np.squeeze(np.asarray(log_likelihood.value)))
-    net_flux, forward_likelihood
+    net_flux = cvx2a(v)
+    forward_likelihood = cvx2a(log_likelihood )
+    forward_likelihood = np.exp(forward_likelihood)
     forward_rate = net_flux*forward_likelihood/(forward_likelihood - 1)
     backward_rate = net_flux/(forward_likelihood - 1)
     return forward_rate, backward_rate
@@ -82,8 +93,16 @@ def predict_log_likelihoods(S, R, T, mu0, uptake_met_concs, excreted_met_concs )
     return pd.DataFrame(log_c.value, index=mets), pd.DataFrame(log_likelihood.value, index=rxns)
 
 def get_rxn_bounds_from_log_likelihood( log_likelihood ):
+    """
+.. math::
+    \begin{eqnarray}
+    v_{lower}(\log L) & = & \min\left(-1,\text{sign}(\log L)\cdot L^{\text{sign}(\log L)}\right) + 1 \\
+    v_{upper}(\log L) & = &  \max\left(1,\text{sign}(\log L)\cdot L^{\text{sign}(\log L)}\right) - 1
+    \end{eqnarray}
+
+    """
+    log_likelihood = cvx2a(log_likelihood)
     n = len(log_likelihood)
-    zero = np.squeeze(np.zeros((n,1)))
     thermodynamic_driving_force =  np.sign(log_likelihood)*np.power(np.exp(log_likelihood), np.sign(log_likelihood))
     return np.minimum(thermodynamic_driving_force, -1) + 1, np.maximum(thermodynamic_driving_force, 1) - 1
  
