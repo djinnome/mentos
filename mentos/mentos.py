@@ -15,7 +15,7 @@ def cvx2a( matrix ):
     """
     cvx variable or value to ndarray
     """
-    if type(matrix) is cvxpy.expressions.variables.variable.Variable:
+    if type(matrix) is cvx.expressions.variables.variable.Variable:
         return np.squeeze(np.asarray(matrix.value))
     elif type(matrix) is np.matrixlib.defmatrix.matrix:
         return np.squeeze(np.asarray(matrix))
