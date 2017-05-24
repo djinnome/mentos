@@ -10,6 +10,15 @@ import cobra
 
 pd.options.display.float_format = '{:.3g}'.format
 
+
+def get_rates_from_log_likelihood_and_flux(v, log_likelihood):
+    net_flux = np.squeeze(np.asarray(v.value))
+    forward_likelihood = np.exp(np.squeeze(np.asarray(log_likelihood.value)))
+    net_flux, forward_likelihood
+    forward_rate = net_flux*forward_likelihood/(forward_likelihood - 1)
+    backward_rate = net_flux/(forward_likelihood - 1)
+    return forward_rate, backward_rate
+
 def predict_log_likelihoods(S, R, T, mu0, uptake_met_concs, excreted_met_concs ):
     m,n = S.shape
     rxns = S.columns
