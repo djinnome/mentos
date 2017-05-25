@@ -322,10 +322,10 @@ where:
 :type deltaG0: numpy.array
 :param mu0: The standard chemical potential numpy array for all metabolites
 :type mu0: numpy.array
-:param constraint_goup: Dictionary of constraint names, constraint sizes, constraint types
-:type constraint_group: dict of dict
-:param variable_group: Dictionary of variable names, variable sizes, and intial values, 
-:type variable_group: dict of dict
+:param variable_group: variable names, variable sizes, and intial values for each variable group
+:type variable_group: list of dict
+:param constraint_goup: Dictionary of constraint names, constraint sizes, constraint types for each constraint group
+:type constraint_group: list of dict
 :param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)
 :type obj: function of 1 argument that returns the value of f(x), g(x), fail
 :param biomass_rxn: The name of the biomass reaction in the fullS dataframe.
