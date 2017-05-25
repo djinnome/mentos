@@ -339,9 +339,9 @@ where:
     mentos = pyOpt.Optimization(obj.__name__,obj)
     mentos.addObj('f')
     for vg in variable_group:
-        mentos.addVarGroup(vg, nvars=variable_group[vg]['nvars'], value=variable_group[vg]['initial_value'], type=variable_group[vg]['type'] )
+        mentos.addVarGroup(vg['name'], nvars=vg['nvars'], value=vg['initial_value'], type=vg['type'] )
     for cg in constraint_group:
-        mentos.addConGroup(name=cg, ncons=constraint_group[cg]['ncons'], type=constraint_group[cg]['type'] )
+        mentos.addConGroup(name=cg['name'], ncons=cg['ncons'], type=cg['type'] )
     opt = pyOpt.PSQP()
     f_star, x_star, message = opt(mentos, sens_type='FD', disp_opts=True, sens_mode='')
     log_c = x_star[:m]
