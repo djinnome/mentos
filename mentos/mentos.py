@@ -339,7 +339,7 @@ where:
     mentos = pyOpt.Optimization(obj.__name__,obj)
     mentos.addObj('f')
     for vg in variable_group:
-        mentos.addVarGroup(vg, nvars=variable_group[vg]['nvars'], value=variable_group[vg]['value'] )
+        mentos.addVarGroup(vg, nvars=variable_group[vg]['nvars'], value=variable_group[vg]['initial_value'], type=variable_group[vg]['type'] )
     for cg in constraint_group:
         mentos.addConGroup(name=cg, ncons=constraint_group[cg]['ncons'], type=constraint_group[cg]['type'] )
     opt = pyOpt.PSQP()
