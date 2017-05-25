@@ -335,6 +335,7 @@ where:
     """
     mets = fullS.index
     rxns = fullS.columns
+    m,n = fullS.shape
     i, n = S.shape
     mentos = pyOpt.Optimization(obj.__name__,obj)
     mentos.addObj('f')
