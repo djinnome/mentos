@@ -290,7 +290,7 @@ where:
     return metab, reactions
 
 
-def run_mentos_ext_free_energy(fullS, S, internal_mets, deltaG0, mu0, c_L, c_U, v_L, v_U,initial_log_c,initial_forward_rate, initial_backward_rate, obj, biomass_rxn, R = 8.3144598/1000.0,T = 298.15):
+def run_mentos_ext_free_energy(fullS, S, internal_mets, deltaG0, mu0,  variable_group, constraint_group,  obj, biomass_rxn, R = 8.3144598/1000.0,T = 298.15):
     """
     run_mentos computes the nonconvex optimization using pyOpt.  
 .. math::
@@ -322,20 +322,10 @@ where:
 :type deltaG0: numpy.array
 :param mu0: The standard chemical potential numpy array for all metabolites
 :type mu0: numpy.array
-:param c_L:  The lower bound numpy array on concentrations
-:type c_L: numpy.array
-:param c_U:  The upper bound numpy array on concentrations
-:type c_U: numpy.array
-:param v_L:  The lower bound numpy array on fluxes
-:type v_L: numpy.array
-:param v_U:  The upper bound numpy array on fluxes
-:type v_U: numpy.array
-:param initial_log_c: The initial log concentrations (perhaps computed from convex mentos) numpy array
-:type initial_log_c: numpy.array
-:param initial_forward_rate: The initial forward rate (perhaps computed from convex mentos) numpy array
-:type initial_forward_rate: numpy.array
-:param initial_backward_rate: The initial backward rate (perhaps computed from convex mentos) numpy array
-:type initial_backward_rate: numpy.array
+:param constraint_goup: Dictionary of constraint names, constraint sizes, constraint types
+:type constraint_group: dict of dict
+:param variable_group: Dictionary of variable names, variable sizes, and intial values, 
+:type variable_group: dict of dict
 :param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)
 :type obj: function of 1 argument that returns the value of f(x), g(x), fail
 :param biomass_rxn: The name of the biomass reaction in the fullS dataframe.
@@ -343,26 +333,15 @@ where:
 :return: reports for metabolite-sized data and reaction-sized data
 :rtype:  tuple of pandas.DataFrame
     """
-    m,n = fullS.shape
     mets = fullS.index
     rxns = fullS.columns
     i, n = S.shape
     mentos = pyOpt.Optimization(obj.__name__,obj)
     mentos.addObj('f')
-    mentos.addVarGroup('log_c', m, type='c', value=initial_log_c, 
-                       lower=np.log(c_L), upper=np.log(c_U))
-    mentos.addVarGroup('forward_rates', n, type='c', value=initial_forward_rate, lower=0, upper=np.inf)
-    mentos.addVarGroup('backward_rates', n, type='c', value=initial_backward_rate, lower=0, upper=np.inf)
-
-    mentos.addConGroup(name='steady_state_flux',ncons=i,type='e')
-    mentos.addConGroup(name='thermodynamics', ncons=n, type='e')
-
-    mentos.addConGroup(name='boundary_conditions', ncons=m-i, type='e')
-    mentos.addConGroup(name='energy_barrier',ncons=n, type='i')
-    mentos.addConGroup(name='energy_sink',ncons=n, type='i')
-    mentos.addConGroup(name='flux_lower_bounds',ncons=n, type='i',lower=v_L, upper=v_U)
-    mentos.addConGroup(name='flux_upper_bounds',ncons=n, type='i',lower=v_L, upper=v_U)
-
+    for vg in variable_group:
+        mentos.addVarGroup(vg, nvars=variable_group[vg]['nvars'], value=variable_group[vg]['value'] )
+    for cg in constraint_group:
+        mentos.addConGroup(name=cg, ncons=constraint_group[cg]['ncons'], type=constraint_group[cg]['type'] )
     opt = pyOpt.PSQP()
     f_star, x_star, message = opt(mentos, sens_type='FD', disp_opts=True, sens_mode='')
     log_c = x_star[:m]
