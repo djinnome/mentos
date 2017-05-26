@@ -49,3 +49,5 @@ deltaG0 = fullS.T.dot(mu0)
 
 met_bounds = pd.Series({'A_ext':c_U, 'E_ext': c_U, 'F_ext': c_L, 'D_ext': c_L}, index=external_mets)
 
+efflux = [fullS.index.get_loc(met) for met in met_bounds[met_bounds == c_L].index]
+uptake = [fullS.index.get_loc(met) for met in met_bounds[met_bounds == c_U].index]
