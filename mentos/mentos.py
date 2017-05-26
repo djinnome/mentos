@@ -356,7 +356,10 @@ where:
     return metab, reactions
 
     
-def compare_frames(left, right):
+def compare_frames(**frames):
+    return  pd.Panel.from_dict(metab,orient='minor').swapaxes(1,0).to_frame(filter_observations=False)
+
+def frame_differences( left, right ):
     return left[pd.DataFrame(
         np.isclose(left, right ),
         index=left.index,
