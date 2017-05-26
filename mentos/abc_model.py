@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 mets = ['A','B','C','D','E','F','A_ext', 'D_ext', 'E_ext','F_ext']
 internal_mets = [m for m in mets if 'ext' not in m]
