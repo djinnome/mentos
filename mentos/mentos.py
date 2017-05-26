@@ -357,7 +357,7 @@ where:
 
     
 def compare_frames(**frames):
-    return  pd.Panel.from_dict(metab,orient='minor').swapaxes(1,0).to_frame(filter_observations=False)
+    return  pd.Panel.from_dict(frames,orient='minor').swapaxes(1,0).to_frame(filter_observations=False)
 
 def frame_differences( left, right ):
     return left[pd.DataFrame(
