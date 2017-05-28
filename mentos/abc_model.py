@@ -52,7 +52,7 @@ met_bounds = pd.Series({'A_ext':c_U, 'E_ext': c_U, 'F_ext': c_L, 'D_ext': c_L}, 
 
 efflux = [fullS.index.get_loc(met) for met in met_bounds[met_bounds == c_L].index]
 uptake = [fullS.index.get_loc(met) for met in met_bounds[met_bounds == c_U].index]
-
+internal = [fullS.index.get_loc(met) for met in internal_mets]
 mu_ext = mu0[external_mets] + R*T*met_bounds.apply(np.log)
 external_free_energy =  (mu_ext['D_ext'] + mu_ext['F_ext']) - (mu_ext['A_ext'] + mu_ext['E_ext'])
 
