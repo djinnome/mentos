@@ -1,11 +1,12 @@
 # mentos
 Maximum Entropy production Of the Stoichiometric matrix
 
+
 To install, first you need my forked version of pyOpt:
 
 	pip install git+https://github.com/djinnome/pyopt.git
 
-For this to successfully install, you may need a fortran compiler.
+For this to successfully install, you will need to be in a Python2 environment. You may also need a fortran compiler.  
 
 If you are on a Mac, you can accomplish this with:
 
