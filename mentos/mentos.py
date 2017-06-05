@@ -20,11 +20,11 @@ def find_equilibrium(met_bounds, efflux_mets, uptake_mets, fullS, mu0, R, T ):
     p = cvx.Problem( cvx.Minimize(cvx.norm2( mu_efflux )),
                      [cvx.sum_entries(fullS.T[efflux_mets].as_matrix()*mu_efflux) == -fullS.T[uptake_mets].dot(mu_uptake).sum()] )
     p.solve()
-    return pd.DataFrame(dict(log_c_efflux=cvx2a(log_c_efflux),
+    return pd.DataFrame(dict(log_c_efflux=cvx2a(log_c_efflux.value),
                              mu_efflux=mu_efflux, \
                              mu0_efflux=mu0[efflux_mets]), index=efflux_mets), \
           pd.DataFrame(dict(Reactant_potential=-fullS.T[uptake_mets].dot(mu_uptake),
-                             Product_potential=cvx2a(fullS.T[efflux_mets].as_matrix()*mu_efflux)), index=rxns), \
+                             Product_potential=cvx2a(fullS.T[efflux_mets].as_matrix()*mu_efflux.value)), index=rxns), \
            pd.DataFrame(dict(log_c_uptake=met_bounds[uptake_mets].apply(np.log), \
                              mu_uptake = mu_uptake,
                              mu0_uptake=mu0[uptake_mets]),index=uptake_mets)
