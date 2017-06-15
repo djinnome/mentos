@@ -10,7 +10,7 @@ import cobra
 
 pd.options.display.float_format = '{:.3g}'.format
 
-def find_equilibrium(met_bounds, efflux_mets, uptake_mets, fullS, mu0, R, T ):
+def find_equilibrium(met_bounds,efflux_mets, uptake_mets, fullS, mu0, R, T ):
     rxns, mets = fullS.columns, fullS.index
     efflux = [mets.get_loc( e ) for e in efflux_mets ]
     uptake = [mets.get_loc( u ) for u in uptake_mets ]
@@ -20,15 +20,31 @@ def find_equilibrium(met_bounds, efflux_mets, uptake_mets, fullS, mu0, R, T ):
     p = cvx.Problem( cvx.Minimize(cvx.norm2( mu_efflux )),
                      [cvx.sum_entries(fullS.T[efflux_mets].as_matrix()*mu_efflux) == -fullS.T[uptake_mets].dot(mu_uptake).sum()] )
     p.solve()
+    Reactant_potential = -fullS.T[uptake_mets].dot(mu_uptake)
+    Product_potential=   cvx2a(fullS.T[efflux_mets].as_matrix()*mu_efflux.value)
     return pd.DataFrame(dict(log_c_efflux=cvx2a(log_c_efflux.value),
                              mu_efflux=cvx2a(mu_efflux.value), \
                              mu0_efflux=mu0[efflux_mets]), index=efflux_mets), \
-          pd.DataFrame(dict(Reactant_potential=-fullS.T[uptake_mets].dot(mu_uptake),
-                             Product_potential=cvx2a(fullS.T[efflux_mets].as_matrix()*mu_efflux.value)), index=rxns), \
+          pd.DataFrame(dict(Reactant_potential=Reactant_potential,
+                             Product_potential=Product_potential,
+                             deltaG=Product_potential - Reactant_potential), index=rxns), \
            pd.DataFrame(dict(log_c_uptake=met_bounds[uptake_mets].apply(np.log), \
                              mu_uptake = mu_uptake,
                              mu0_uptake=mu0[uptake_mets]),index=uptake_mets)
-                        
+
+def find_equilibrium2(met_bounds, fullS, mu0, R, T ):
+    """
+    Find the equilibrium given the fixed metabolites in met_bounds
+    """
+    rxns, mets = fullS.columns, fullS.index
+    log_c = cvx.Variable(len(mets))
+    mu = log_c*R*T + mu0.values
+    deltaG = fullS.T.as_matrix()*mu
+    p = cvx.Problem( cvx.Minimize(cvx.norm2( deltaG )),
+                     [log_c[mets.get_loc(met)] == met_bounds[met] for met in met_bounds.index])
+    p.solve()
+    return pd.DataFrame({'$\log c$': cvx2a(log_c.value), '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value)},index=rxns), fullS.T*cvx2a(mu.value)
+    #return cvx2a(log_c.value), cvx2a(mu.value), cvx2a(deltaG.value), fullS.T*cvx2a(mu.value)
                                   
 
 def cvx2a( matrix ):
