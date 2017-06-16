@@ -47,8 +47,8 @@ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets
     p = cvx.Problem( cvx.Minimize(cvx.norm2( deltaG )),
                      [log_c[mets.get_loc(met)] == log_met_bounds[met] for met in log_met_bounds.index])
     p.solve()
-    mu_efflux = pd.Series(mentos.cvx2a(mu[efflux_idx].value),index=efflux_mets)
-    mu_uptake = pd.Series(mentos.cvx2a(mu[uptake_idx].value),index=uptake_mets)
+    mu_efflux = pd.Series(cvx2a(mu[efflux_idx].value),index=efflux_mets)
+    mu_uptake = pd.Series(cvx2a(mu[uptake_idx].value),index=uptake_mets)
     G_products = fullS.T[efflux_mets].dot(mu_efflux)
     G_reactants = fullS.T[uptake_mets].dot(mu_uptake)
     return pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),'$\log c$': cvx2a(log_c.value), '$RT\log c$':R*T*cvx2a(log_c.value), '$\mu^0$': mu0, '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), '$G_{products}$': G_products , '$G_{reactants}$': G_reactants},index=rxns), fullS.T*cvx2a(mu.value)
