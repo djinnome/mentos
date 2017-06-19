@@ -52,7 +52,64 @@ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets
     G_products = fullS.T[efflux_mets].dot(mu_efflux)
     G_reactants = fullS.T[uptake_mets].dot(mu_uptake)
     return pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),'$\log c$': cvx2a(log_c.value), '$RT\log c$':R*T*cvx2a(log_c.value), '$\mu^0$': mu0, '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), '$G_{products}$': G_products , '$G_{reactants}$': G_reactants},index=rxns), fullS.T*cvx2a(mu.value)
-                                  
+ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets ):
+    """
+    Find the equilibrium given the fixed metabolites in met_bounds
+    """
+    rxns, mets = fullS.columns, fullS.index
+    log_c = cvx.Variable(len(mets))
+    #r = cvx.Variable(len(rxns))
+    mu = log_c*R*T + mu0.values
+    efflux_idx = [mets.get_loc(e) for e in efflux_mets]
+    uptake_idx = [mets.get_loc(u) for u in uptake_mets]
+
+    deltaG = fullS.T.as_matrix()*mu
+    
+    obj =  cvx.Minimize(cvx.norm2(log_c -np.log(1e-3)))
+    metabolite_constraint = [log_c[mets.get_loc(met)] == log_met_bounds[met] for met in log_met_bounds.index] 
+    equilibrium_constraint = [deltaG == 0]
+    p = cvx.Problem(obj,   equilibrium_constraint + metabolite_constraint) # + equilibrium_constraint)
+    p.solve()
+    
+    #p = cvx.Problem( cvx.Minimize(cvx.norm2( deltaG )),
+    #                 metabolite_constraint)
+    #p.solve(verbose=True)
+    
+    
+    mu_efflux = pd.Series(cvx2a(mu[efflux_idx].value),index=efflux_mets)
+    mu_uptake = pd.Series(cvx2a(mu[uptake_idx].value),index=uptake_mets)
+
+    G_products = fullS.T[efflux_mets].dot(mu_efflux)
+    G_reactants = fullS.T[uptake_mets].dot(mu_uptake)
+       
+   
+    potential=pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),
+                            '$\log c$': cvx2a(log_c.value), 
+                            '$RT\log c$':R*T*cvx2a(log_c.value), 
+                            '$\mu^0$': mu0, 
+                            '$\mu$':cvx2a(mu.value)},index=mets) 
+    deltaG = pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), 
+                            '$G_{products}$': G_products , 
+                            '$G_{reactants}$': G_reactants},index=rxns)
+    
+    total_reactant_potential = (fullS.T[uptake_mets]*cvx2a(mu[uptake_idx].value)).T
+    total_reactant_potential['stoichiometry'] = fullS.T[uptake_mets].squeeze()
+    total_reactant_potential['$\mu$'] = cvx2a(mu[uptake_idx].value)
+    total_product_potential = (fullS.T[efflux_mets]*cvx2a(mu[efflux_idx].value)).T
+    total_product_potential['stoichiometry'] = fullS.T[efflux_mets].squeeze()
+    total_product_potential['$\mu$'] = cvx2a(mu[efflux_idx].value)
+    return dict(potential= potential, 
+                deltaG=deltaG, 
+                total_reactant_potential=total_reactant_potential,
+                total_product_potential = total_product_potential,
+                metabolite_constraint=pd.DataFrame({'metabolite_constraint':[m.dual_value 
+                                                            for m in metabolite_constraint]}
+                                        ,index=log_met_bounds.index), 
+                equilibrium_constraint = pd.DataFrame({'equilibrium_constraint':[e.dual_value 
+                                                            for e in equilibrium_constraint]},
+                                                        index=rxns), 
+                status=p.status)
+                                 
 
 def cvx2a( matrix ):
     """
