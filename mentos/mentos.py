@@ -46,13 +46,14 @@ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets
     
     p = cvx.Problem( cvx.Minimize(cvx.norm2( deltaG )),
                      [log_c[mets.get_loc(met)] == log_met_bounds[met] for met in log_met_bounds.index])
-    p.solve()
+    p.solve(verbose=True)
     mu_efflux = pd.Series(cvx2a(mu[efflux_idx].value),index=efflux_mets)
     mu_uptake = pd.Series(cvx2a(mu[uptake_idx].value),index=uptake_mets)
     G_products = fullS.T[efflux_mets].dot(mu_efflux)
     G_reactants = fullS.T[uptake_mets].dot(mu_uptake)
-    return pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),'$\log c$': cvx2a(log_c.value), '$RT\log c$':R*T*cvx2a(log_c.value), '$\mu^0$': mu0, '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), '$G_{products}$': G_products , '$G_{reactants}$': G_reactants},index=rxns), fullS.T*cvx2a(mu.value)
- def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets ):
+    return pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),'$\log c$': cvx2a(log_c.value), '$RT\log c$':R*T*cvx2a(log_c.value), '$\mu^0$': mu0, '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), '$G_{products}$': G_products , '$G_{reactants}$': G_reactants},index=rxns), fullS.T.dot(cvx2a(mu.value))
+
+def find_equilibrium3(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets, ref_mols=1e-3 ):
     """
     Find the equilibrium given the fixed metabolites in met_bounds
     """
@@ -65,10 +66,10 @@ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets
 
     deltaG = fullS.T.as_matrix()*mu
     
-    obj =  cvx.Minimize(cvx.norm2(log_c -np.log(1e-3)))
+    min_ref_mols_obj =  cvx.Minimize(cvx.norm2(log_c -np.log(ref_mols)))
     metabolite_constraint = [log_c[mets.get_loc(met)] == log_met_bounds[met] for met in log_met_bounds.index] 
     equilibrium_constraint = [deltaG == 0]
-    p = cvx.Problem(obj,   equilibrium_constraint + metabolite_constraint) # + equilibrium_constraint)
+    p = cvx.Problem(min_ref_mols_obj,   equilibrium_constraint + metabolite_constraint) # + equilibrium_constraint)
     p.solve()
     
     #p = cvx.Problem( cvx.Minimize(cvx.norm2( deltaG )),
@@ -249,6 +250,8 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['Log Concentrations'] = pd.DataFrame(log_c, index=metabolites)
     mets['Standard Chemical potential'] = mu0
     mets['Chemical potential'] = mu0 + R*T*log_c
+    mets['Normalized Concentrations'] = pd.DataFrame(mets['Concentrations']/mets['Concentrations'].sum(),index=metabolites)
+    mets['Entropy'] = -mets['Normalized Concentrations']*mets['Normalized Concentrations'].apply(np.log)
     mets['S*forward_rate'] = pd.DataFrame(np.dot(S,forward_rate), index= internal_mets)
     mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
     mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
