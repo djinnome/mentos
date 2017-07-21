@@ -251,7 +251,10 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['Standard Chemical potential'] = mu0
     mets['Chemical potential'] = mu0 + R*T*log_c
     mets['Normalized Concentrations'] = pd.DataFrame(mets['Concentrations']/mets['Concentrations'].sum(),index=metabolites)
-    mets['Entropy'] = -mets['Normalized Concentrations']*mets['Normalized Concentrations'].apply(np.log)
+    mets['Absolute activities'] = np.exp(mets['Chemical potential'])
+    mets['Normalized absolute activities'] = mets['Absolute activities']/mets['Absolute activities'].sum()
+    mets['Entropy'] = -mets['Normalized absolute activities']*mets['Normalized absolute activities'].apply(np.log)
+    mets['Entropy of Concentrations'] = -mets['Normalized Concentrations']*mets['Normalized Concentrations'].apply(np.log)
     mets['S*forward_rate'] = pd.DataFrame(np.dot(S,forward_rate), index= internal_mets)
     mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
     mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
