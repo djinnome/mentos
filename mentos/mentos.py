@@ -287,7 +287,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     df['Forward rate'] = pd.Series(forward_rate, index=rxns)
     df['Backward rate'] = pd.Series( backward_rate, index=rxns)
     sgn =  np.sign(np.log(forward_likelihood))
-    df['Thermodynamic driving force'] = sgn*np.power(forward_likelihood, sgn)
+    df['Thermodynamic driving force'] = -df['Delta G']
     df['Net flux'] = df['Forward rate'] - df['Backward rate']
     #df['Forward likelihood constraints'] = pd.DataFrame(constraints[0].dual_value, index=rxns)
     #df['Backward likelihood constraints'] = pd.DataFrame(constraints[1].dual_value, index=rxns)
@@ -295,6 +295,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     df['Forward Entropy Production'] = -df['Forward probabilities']*df['Forward probabilities'].apply(np.log)
     df['Backward Entropy Production'] = -df['Backward probabilities']*df['Backward probabilities'].apply(np.log)
     df['Reaction Entropy Production'] = df['Forward Entropy Production'] + df['Backward Entropy Production']
+    df['Net Reaction Entropy Production'] = df['Forward Entropy Production'] - df['Backward Entropy Production']
     df['Microscopic Reaction Entropy Production Rate'] = df['Forward Entropy Production']*df['Forward rate'] + df['Backward Entropy Production']*df['Backward rate']
     df['Microscopic Reaction Entropy Production Net Flux'] = df['Forward Entropy Production']*df['Net flux'] + df['Backward Entropy Production']*df['Net flux']
     df['Microscopic Reaction Entropy Production Net Flux Difference'] = df['Forward Entropy Production']*df['Net flux'] - df['Backward Entropy Production']*df['Net flux']
