@@ -52,7 +52,7 @@ def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets
     G_products = fullS.T[efflux_mets].dot(mu_efflux)
     G_reactants = fullS.T[uptake_mets].dot(mu_uptake)
     return pd.DataFrame({'c': np.exp(cvx2a(log_c.value)),'$\log c$': cvx2a(log_c.value), '$RT\log c$':R*T*cvx2a(log_c.value), '$\mu^0$': mu0, '$\mu$':cvx2a(mu.value)},index=mets), pd.DataFrame({'$\Delta G$':cvx2a(deltaG.value), '$G_{products}$': G_products , '$G_{reactants}$': G_reactants},index=rxns), fullS.T*cvx2a(mu.value)
- def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets ):
+def find_equilibrium2(log_met_bounds, fullS, mu0, R, T, efflux_mets, uptake_mets ):
     """
     Find the equilibrium given the fixed metabolites in met_bounds
     """
@@ -306,7 +306,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
 
 def run_mentos(fullS, S, internal_mets, deltaG0, mu0, c_L, c_U, v_L, v_U,initial_log_c,initial_forward_rate, initial_backward_rate, obj, biomass_rxn, R = 8.3144598/1000.0,T = 298.15):
     """
-    run_mentos computes the nonconvex optimization using pyOpt.  
+    run_mentos computes the nonconvex optimization using pyOpt. This solution can be used as initial constrains for convex problem. 
 .. math::
     \underset{x}{\min} & f(x) & 
 
