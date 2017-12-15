@@ -258,6 +258,7 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['S*forward_rate'] = pd.DataFrame(np.dot(S,forward_rate), index= internal_mets)
     mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
     mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
+    mets['S*net_likelihood'] = pd.DataFrame(np.dot(S,forward_likelihood - backward_likelihood), index=internal_mets)
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets.astype(np.float64)
 
