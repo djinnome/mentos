@@ -244,6 +244,9 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     n_A = 6.022e23       # Avogadros number
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
+    forward_probabilities = pd.DataFrame(forward_likelihood/np.sum(forward_likelihood + backward_likelihood), index=rxns)
+    backward_probabilities = pd.DataFrame(backward_likelihood/np.sum(forward_likelihood + backward_likelihood), index=rxns)
+    net_probabilities = forward_probabilities - backward_probabilities
     net_flux = forward_rate - backward_rate
     mets = pd.DataFrame(n_A*V*np.exp(log_c), index=metabolites, columns=['Counts'], dtype=int)
     mets['Concentrations'] = pd.DataFrame(np.exp(log_c), index=metabolites)
@@ -259,6 +262,7 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
     mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
     mets['S*net_likelihood'] = pd.DataFrame(np.dot(S,forward_likelihood - backward_likelihood), index=internal_mets)
+    mets['S*net_probabilities'] = pd.DataFrame(np.dot(S, net_probabilities), index=internal_mets)
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets.astype(np.float64)
 
