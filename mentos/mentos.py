@@ -266,6 +266,13 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets.astype(np.float64)
 
+def print_report( report_dir, out_template, df ):
+    nonalphanumRE = re.compile(r'[^A-Za-z0-9_]')
+    if not os.path.isdir(report_dir):
+        os.mkdir(report_dir)
+    for c in df.columns:
+        df[c].to_csv(os.path.join(report_dir,out_template.format(nonalphanumRE.sub('_', c))),header=True)
+
 def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
  # ideal gas constant
     n_A = 6.022e23       # Avogadros number
