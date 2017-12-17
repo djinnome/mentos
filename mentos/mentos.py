@@ -5,7 +5,7 @@ import numpy as np
 import cvxpy as cvx
 import pandas as pd
 import numpy as np
-import cobra, re
+import cobra, re, os
 
 
 pd.options.display.float_format = '{:.3g}'.format
@@ -272,7 +272,7 @@ def print_report( report_dir, out_template, df ):
         os.mkdir(report_dir)
     for c in df.columns:
         df[c].to_csv(os.path.join(report_dir,out_template.format(nonalphanumRE.sub('_', c))),header=True)
-
+    df.to_csv(os.path.join(report_dir, out_template.format(os.path.basename(report_dir))))
 def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
  # ideal gas constant
     n_A = 6.022e23       # Avogadros number
@@ -403,7 +403,7 @@ where:
     backward_rate = np.abs(x_star[m+n:m+2*n])
     log_Q = np.dot(fullS.T,log_c)   # log of the Reaction quotient
     log_K = -1.0/(R*T)*deltaG0.as_matrix() 
-    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, mu0 )
+    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, rxns, S, mets, internal_mets, rxns, fullS, mu0 )
     reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
@@ -469,7 +469,7 @@ where:
     backward_rate = np.abs(x_star[m+n:m+2*n])
     log_Q = np.dot(fullS.T,log_c)   # log of the Reaction quotient
     log_K = -1.0/(R*T)*deltaG0.as_matrix() 
-    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, mu0 )
+    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, rxns, fullS, mu0 )
     reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
