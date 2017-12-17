@@ -5,7 +5,7 @@ import numpy as np
 import cvxpy as cvx
 import pandas as pd
 import numpy as np
-import cobra
+import cobra, re
 
 
 pd.options.display.float_format = '{:.3g}'.format
