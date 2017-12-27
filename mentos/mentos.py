@@ -5,7 +5,7 @@ import numpy as np
 import cvxpy as cvx
 import pandas as pd
 import numpy as np
-import cobra
+import cobra, re, os
 
 
 pd.options.display.float_format = '{:.3g}'.format
@@ -240,10 +240,13 @@ def make_variables( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): 
 
 
 
-def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, mu0,     T = 298.15,     V = 1e-15,     R = 8.3144598/1000.0  ) :
+def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, rxns, fullS, mu0,     T = 298.15,     V = 1e-15,     R = 8.3144598/1000.0  ) :
     n_A = 6.022e23       # Avogadros number
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
+    forward_probabilities = pd.DataFrame(forward_likelihood/np.sum(forward_likelihood + backward_likelihood), index=rxns)
+    backward_probabilities = pd.DataFrame(backward_likelihood/np.sum(forward_likelihood + backward_likelihood), index=rxns)
+    net_probabilities = forward_probabilities - backward_probabilities
     net_flux = forward_rate - backward_rate
     mets = pd.DataFrame(n_A*V*np.exp(log_c), index=metabolites, columns=['Counts'], dtype=int)
     mets['Concentrations'] = pd.DataFrame(np.exp(log_c), index=metabolites)
@@ -255,12 +258,21 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['Normalized absolute activities'] = mets['Absolute activities']/mets['Absolute activities'].sum()
     mets['Entropy'] = -mets['Normalized absolute activities']*mets['Normalized absolute activities'].apply(np.log)
     mets['Entropy of Concentrations'] = -mets['Normalized Concentrations']*mets['Normalized Concentrations'].apply(np.log)
-    mets['S*forward_rate'] = pd.DataFrame(np.dot(S,forward_rate), index= internal_mets)
-    mets['S*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
-    mets['S*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
+    mets['fullS*forward_rate'] = fullS.dot(forward_rate)
+    mets['fullS*backward_rate'] =fullS.dot(backward_rate)
+    mets['fullS*net_flux'] = fullS.dot(net_flux)
+    mets['fullS*net_likelihood'] = fullS.dot(forward_likelihood - backward_likelihood)
+    mets['fullS*net_probabilities'] = fullS.dot(net_probabilities)
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets.astype(np.float64)
 
+def print_report( report_dir, out_template, df ):
+    nonalphanumRE = re.compile(r'[^A-Za-z0-9_]')
+    if not os.path.isdir(report_dir):
+        os.mkdir(report_dir)
+    for c in df.columns:
+        df[c].to_csv(os.path.join(report_dir,out_template.format(nonalphanumRE.sub('_', c))),header=True)
+    df.to_csv(os.path.join(report_dir, out_template.format(nonalphanumRE.sub('_', os.path.basename(report_dir)))), sep='\t')
 def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
  # ideal gas constant
     n_A = 6.022e23       # Avogadros number
@@ -391,7 +403,7 @@ where:
     backward_rate = np.abs(x_star[m+n:m+2*n])
     log_Q = np.dot(fullS.T,log_c)   # log of the Reaction quotient
     log_K = -1.0/(R*T)*deltaG0.as_matrix() 
-    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, mu0 )
+    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, rxns, S, mets, internal_mets, rxns, fullS, mu0 )
     reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
@@ -457,7 +469,7 @@ where:
     backward_rate = np.abs(x_star[m+n:m+2*n])
     log_Q = np.dot(fullS.T,log_c)   # log of the Reaction quotient
     log_K = -1.0/(R*T)*deltaG0.as_matrix() 
-    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, mu0 )
+    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, rxns, fullS, mu0 )
     reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
