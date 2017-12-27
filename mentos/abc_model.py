@@ -44,7 +44,7 @@ metab = {}
 reactions = {}
 true_metab, true_reactions = {},{}
 
-mu0 = pd.Series([4.0,2,2,0,2,1,4,0,2,1], index=mets,dtype='float64')
+mu0 = pd.Series([0.0,-2,-2,-4.0,-2.,-10.0,0.0,-4.0,-2.0,-10.0], index=mets,dtype='float64')
 deltaG0 = fullS.T.dot(mu0)
 
 
