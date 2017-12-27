@@ -280,7 +280,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
     df = pd.DataFrame(forward_likelihood,index=rxns, columns=['Forward likelihoods'])
-    df['Backward likelihoods'] = pd.DataFram"e(backward_likelihood, index=rxns) #/np.log(df['Rxn likelihoods']).sum()
+    df['Backward likelihoods'] = pd.DataFrame(backward_likelihood, index=rxns) #/np.log(df['Rxn likelihoods']).sum()
     df['Delta G'] = pd.DataFrame((log_K - log_Q)*(-R*T), index=rxns)
     #df['Q_r'] = pd.DataFrame(np.exp(log_Q.value),index=rxns)
     #df['K_eq'] = pd.DataFrame(np.exp(log_K.value),index=rxns)
