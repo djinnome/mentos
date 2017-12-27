@@ -258,10 +258,10 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
     mets['Normalized absolute activities'] = mets['Absolute activities']/mets['Absolute activities'].sum()
     mets['Entropy'] = -mets['Normalized absolute activities']*mets['Normalized absolute activities'].apply(np.log)
     mets['Entropy of Concentrations'] = -mets['Normalized Concentrations']*mets['Normalized Concentrations'].apply(np.log)
-    mets['fullS*forward_rate'] = pd.DataFrame(np.dot(S,forward_rate), index= internal_mets)
-    mets['fullS*backward_rate'] = pd.DataFrame(np.dot(S,backward_rate), index=internal_mets)
-    mets['fullS*net_flux'] = pd.DataFrame(np.dot(S,net_flux), index=internal_mets)
-    mets['fullS*net_likelihood'] = pd.DataFrame(np.dot(S,forward_likelihood - backward_likelihood), index=internal_mets)
+    mets['fullS*forward_rate'] = fullS.dot(forward_rate)
+    mets['fullS*backward_rate'] =fullS.dot(backward_rate)
+    mets['fullS*net_flux'] = fullS.dot(net_flux)
+    mets['fullS*net_likelihood'] = fullS.dot(forward_likelihood - backward_likelihood)
     mets['fullS*net_probabilities'] = fullS.dot(net_probabilities)
     #mets['Steady state constraints'] = pd.DataFrame(constraints[-1].dual_value, index=internal_metabolites)
     return mets.astype(np.float64)
@@ -272,7 +272,7 @@ def print_report( report_dir, out_template, df ):
         os.mkdir(report_dir)
     for c in df.columns:
         df[c].to_csv(os.path.join(report_dir,out_template.format(nonalphanumRE.sub('_', c))),header=True)
-    df.to_csv(os.path.join(report_dir, out_template.format(os.path.basename(report_dir))))
+    df.to_csv(os.path.join(report_dir, out_template.format(nonalphanumRE.sub('_', os.path.basename(report_dir)))), sep='\t')
 def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_rate, rxns, deltaG0, biomass_rxn, T=298.15, V=1e-15,     R = 8.3144598/1000.0):
  # ideal gas constant
     n_A = 6.022e23       # Avogadros number
@@ -280,7 +280,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     forward_likelihood = forward_rate/backward_rate
     backward_likelihood = backward_rate/forward_rate
     df = pd.DataFrame(forward_likelihood,index=rxns, columns=['Forward likelihoods'])
-    df['Backward likelihoods'] = pd.DataFrame(backward_likelihood, index=rxns) #/np.log(df['Rxn likelihoods']).sum()
+    df['Backward likelihoods'] = pd.DataFram"e(backward_likelihood, index=rxns) #/np.log(df['Rxn likelihoods']).sum()
     df['Delta G'] = pd.DataFrame((log_K - log_Q)*(-R*T), index=rxns)
     #df['Q_r'] = pd.DataFrame(np.exp(log_Q.value),index=rxns)
     #df['K_eq'] = pd.DataFrame(np.exp(log_K.value),index=rxns)
