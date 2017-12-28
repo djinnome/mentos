@@ -219,7 +219,7 @@ def predict_fluxes( S, rxn_bounds, biomass ):
     prob = cvx.Problem(obj, constraints)
     prob.solve( verbose=True)
     return pd.DataFrame(v.value, index=S.columns)
-def make_variables( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): # ideal gas constant in cals/mol ):
+def make_variables_from_rates( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): # ideal gas constant in cals/mol ):
     m,n = fullS.shape
     log_c = x[:m]
     forward_rate = np.abs(x[m:m+n])
@@ -238,6 +238,28 @@ def make_variables( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): 
     return log_c, forward_rate, backward_rate, log_Q, log_K, forward_likelihood, backward_likelihood, \
     forward_probability, backward_probability, mu, thermodynamic_driving_force, net_flux
 
+make_variables = make_variables_from_rates
+
+def make_variables_from_likelihoods( x, fullS, mu0, deltaG0,R = 8.3144598/1000.0,  T = 298.15 ): # ideal gas constant in cals/mol ):
+    m,n = fullS.shape
+    log_c = x[:m]
+    forward_likelihood = np.abs(x[m:m+n])
+    backward_likelihood = np.reciprocal(forward_likelihood)
+    log_Q = np.dot(fullS.T,log_c)   # log of the Reaction quotient
+    log_K = -1.0/(R*T)*deltaG0.as_matrix()
+    net_likelihood = forward_likelihood - backward_likelihood
+    
+    forward_rate = forward_likelihood*net_likelihood/(forward_likelihood - 1)
+    backward_rate = net_likelihood/(forward_likelihood - 1 )
+    total_likelihood = forward_likelihood.sum()+ backward_likelihood.sum()
+    forward_probability = forward_likelihood/total_likelihood
+    backward_probability= backward_likelihood/total_likelihood
+    sign = np.sign(np.log(forward_likelihood))
+    thermodynamic_driving_force = sign*np.power(forward_likelihood, sign)
+    net_flux = forward_rate - backward_rate
+    mu = mu0 + R*T*log_c
+    return log_c, forward_rate, backward_rate, log_Q, log_K, forward_likelihood, backward_likelihood, \
+    forward_probability, backward_probability, mu, thermodynamic_driving_force, net_flux
 
 
 def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolites, internal_mets, rxns, fullS, mu0,     T = 298.15,     V = 1e-15,     R = 8.3144598/1000.0  ) :
