@@ -496,6 +496,74 @@ where:
                                                 backward_rate, rxns, deltaG0, biomass_rxn)
     return metab, reactions
 
+
+def run_mentos_w_likelihoods(fullS, S, internal_mets, deltaG0, mu0,  variable_group, constraint_group,  obj, biomass_rxn, R = 8.3144598/1000.0,T = 298.15):
+    """
+    run_mentos computes the nonconvex optimization using pyOpt.  
+.. math::
+    \underset{x}{\min} & f(x) & 
+
+     & g_j(x) = 0, & j = 1, \ldots, m_e  
+
+     & g_j(x) \leq 0, & j = m_e + 1, \ldots, m  
+
+     & x_{iL} \leq x_i \leq x_{iU}, & i = 1,\ldots, n 
+
+
+where:
+
+    * x is the vector of design variables
+    * f(x) is a nonlinear function
+    * g(x) is a linear or nonlinear function
+    * n is the number of design variables
+    * m_e is the number of equality constraints
+    * m is the total number of constraints (number of equality constraints: m_i = m - m_e)
+
+    The arguments to this function are as follows
+
+:param fullS:  The stoichometric matrix data frame object containing all metabolites
+:type fullS: pandas.DataFrame with reactions as columns and metabolites as row index
+:param S:  The stoichiometric matrix numpy matrix containing only those metabolites in steady state
+:type S: numpy.matrix
+:param deltaG0: The standard change in Gibbs free energy for all reactions
+:type deltaG0: numpy.array
+:param mu0: The standard chemical potential numpy array for all metabolites
+:type mu0: numpy.array
+:param variable_group: variable names, variable sizes, and intial values for each variable group
+:type variable_group: list of dict
+:param constraint_goup: Dictionary of constraint names, constraint sizes, constraint types for each constraint group
+:type constraint_group: list of dict
+:param obj: The objective function. This is a python function of one parameter x.  Returns the value of the objective function f, the constraint function g, and a fail flag (0 is pass)
+:type obj: function of 1 argument that returns the value of f(x), g(x), fail
+:param biomass_rxn: The name of the biomass reaction in the fullS dataframe.
+:type biomass_rxn: string
+:return: reports for metabolite-sized data and reaction-sized data
+:rtype:  tuple of pandas.DataFrame
+    """
+    mets = fullS.index
+    rxns = fullS.columns
+    m,n = fullS.shape
+    i, n = S.shape
+    mentos = pyOpt.Optimization(obj.__name__,obj)
+    mentos.addObj('f')
+    for vg in variable_group:
+        mentos.addVarGroup(vg['name'], nvars=vg['nvars'], value=vg['initial_value'], type=vg['type'] )
+    for cg in constraint_group:
+        mentos.addConGroup(name=cg['name'], ncons=cg['ncons'], type=cg['type'] )
+    opt = pyOpt.PSQP()
+    f_star, x_star, message = opt(mentos, sens_type='FD', disp_opts=True, sens_mode='')
+    log_c, \
+    forward_rate, backward_rate, \
+    log_Q, log_K, \
+    forward_likelihood, backward_likelihood, \
+    forward_probability, backward_probability, mu, \
+    thermodynamic_driving_force, \
+    net_flux = make_variables_from_likelihoods( x_star, fullS, mu0, deltaG0, R, T )
+    metab = generate_metabolite_report(log_c, forward_rate, backward_rate, S, mets, internal_mets, rxns, fullS, mu0 )
+    reactions = generate_rxn_report(mets, log_c, log_Q, log_K,forward_rate, 
+                                                backward_rate, rxns, deltaG0, biomass_rxn)
+    return metab, reactions
+
     
 def compare_frames(**frames):
     return  pd.Panel.from_dict(frames,orient='minor').swapaxes(1,0).to_frame(filter_observations=False)
