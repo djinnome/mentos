@@ -291,7 +291,7 @@ def generate_metabolite_report( log_c, forward_rate, backward_rate, S, metabolit
 def print_report( report_dir, out_template, df ):
     nonalphanumRE = re.compile(r'[^A-Za-z0-9_]')
     if not os.path.isdir(report_dir):
-        os.mkdir(report_dir)
+        os.makedirs(report_dir)
     for c in df.columns:
         df[c].to_csv(os.path.join(report_dir,out_template.format(nonalphanumRE.sub('_', c))),header=True)
     df.to_csv(os.path.join(report_dir, out_template.format(nonalphanumRE.sub('_', os.path.basename(report_dir)))), sep='\t')
