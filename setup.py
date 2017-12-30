@@ -19,9 +19,7 @@ setup(name='mentos',
       url='http://github.com/djinnome/mentos',
       author='Jeremy Zucker',
       author_email='djinnome@gmail.com',
-      install_requires=['pandas','scipy','cvxpy','numpy','cobra','python-libsbml','pyOpt>=1.2.0.2','kitchen'],
-      dependency_links=[
-        "https://github.com/djinnome/pyopt/tarball/master#egg=pyOpt-1.2.0.2"],
+      install_requires=['pandas','scipy','cvxpy','numpy','cobra','python-libsbml','kitchen'],
       license='MIT',
       packages=['mentos'],
       zip_safe=False)
