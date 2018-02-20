@@ -16,7 +16,8 @@ data = {'R_1': pd.Series({'A':1, 'A_ext': -1}),
        'R_9': pd.Series({'F':-1, 'F_ext':1})}
 fullS = pd.DataFrame(data, columns=rxns, index=mets,dtype='int64').fillna(0)
 
-biomass = fullS.columns.get_loc('R_8')  # Index of biomass reaction
+biomass_rxn = 'R_8'
+biomass = fullS.columns.get_loc(biomass_rxn)  # Index of biomass reaction
 
 A_uptake, E_uptake = 0, 4   # Index of uptake reactions
 

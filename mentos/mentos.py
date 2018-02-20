@@ -318,7 +318,7 @@ def generate_rxn_report(metabolites, log_c, log_Q, log_K,forward_rate, backward_
     df['Net likelihoods'] = df['Forward likelihoods'] - df['Backward likelihoods']
     df['Forward rate'] = pd.Series(forward_rate, index=rxns)
     df['Backward rate'] = pd.Series( backward_rate, index=rxns)
-    df['Reduce rate'] = df['Forward rate']*df['Backward rate']/(df['Forward rate'] + df['Backward rate'])
+    df['Reduced rate'] = df['Forward rate']*df['Backward rate']/(df['Forward rate'] + df['Backward rate'])
     sgn =  np.sign(np.log(forward_likelihood))
     df['Thermodynamic driving force'] = -df['Delta G']
     df['Net flux'] = df['Forward rate'] - df['Backward rate']
@@ -353,3 +353,278 @@ def frame_differences( left, right ):
         np.isclose(left, right ),
         index=left.index,
         columns=left.columns)].T
+
+
+def check_constraints( x0, constraints,rxns, mets ):
+        internal_mets = [m for m in mets if '_e' not in m]
+        for constraint in constraints: 
+            constraint_eval = constraint['fun'](x0)
+            if constraint['type'] == 'eq':
+                if np.allclose(constraint_eval, 0):
+                    display(Latex('{}'.format(constraint['fun'].__doc__)))
+                    if 'jac' in constraint:
+                        display(Latex('{}'.format(constraint['jac'].__doc__)))
+                else:
+                    display('{} violated'.format(constraint['fun'].__name__))
+                    if len(constraint_eval) == len(internal_mets):
+                        constraint_s = pd.Series(constraint_eval,index=internal_mets)
+                        
+                        display(constraint_s[~constraint_s.apply(lambda x: np.isclose(x,0))].to_frame(constraint['fun'].__doc__))
+                    elif len(constraint_eval) == len(rxns):
+                        display(pd.DataFrame(constraint_eval, index=rxns))
+                    
+            elif constraint['type'] == 'ineq':
+                if np.all(constraint_eval >= 0):
+                    display(Latex('{}'.format(constraint['fun'].__doc__)))
+                else:
+                    display('{} violated'.format(constraint['fun'].__name__))
+                    if len(constraint_eval) == len(rxns):
+                        display(pd.DataFrame(constraint_eval,index=rxns))
+                
+            
+def make_logc_bounds(mets, met_bounds,epsilon=1, log_c_L = np.log(1e-8), log_c_U=np.log(1e-3)):
+        logc_bounds = []
+        for met in mets:
+            if met in met_bounds:
+                logc_bounds.append((np.log(met_bounds[met]), np.log(met_bounds[met])))
+            else:
+                logc_bounds.append((log_c_L, log_c_U))
+        return logc_bounds
+    
+def make_rate_bounds( rxns, r_L=0, r_U=None):
+        return [(r_L, r_U) for rxn in rxns]
+
+def entropy_production_thermo_net_likelihood_ss_obj( x ):
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy(np.concatenate( (forward_probability, backward_probability ) ) ) \
+            - 1000*np.sum( np.square( np.dot( S, forward_likelihood - backward_likelihood ))) \
+            - 1000*np.sum( np.square( np.log( forward_likelihood ) - log_K + log_Q )) 
+        return -f
+def entropy_production_obj( x ):
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy(np.concatenate( (forward_probability, backward_probability ) ) )
+        return -f
+def micro_entropy_production_rate_obj(x):
+        """Sum of Elementwise product of entropy and rate for forward and backward probabilities"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = np.sum( entr(forward_probability)*forward_rate)  + np.sum( entr(backward_probability)*backward_rate )
+        return -f
+    
+def micro_entropy_production_net_flux_obj( x ):
+        """Sum of Elementwise product of entropy and net flux for forward and backward probabilities"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = np.sum( entr( forward_probability) * net_flux ) + np.sum( entr( backward_probability ) * net_flux )
+        return -f
+    
+def macro_entropy_production_rate_obj(x):
+        """Maximize product of  entropy production difference and macroscopic biomass growth rate of the ABC model"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy(np.concatenate( (forward_probability, backward_probability ) ) )*net_flux[biomass] #- 1000*np.sum(np.abs(slack))
+        return -f
+    
+def macro_entropy_production_rate_and_net_likelihood_ss_obj(x):
+        """Maximize product of  entropy production difference and macroscopic biomass growth rate of the ABC model"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy(np.concatenate( (forward_probability, backward_probability ) ) )*net_flux[biomass] - 1000*np.sum(np.square(np.dot(S, forward_likelihood - backward_likelihood)))
+        return -f
+        
+def macro_entropy_production_rate_thermo_and_net_likelihood_ss_obj(x):
+        """Maximize product of  entropy production difference and macroscopic biomass growth rate of the ABC model"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy( np.concatenate(( forward_probability, backward_probability ) ) )*net_flux[biomass] \
+            - 1000*np.sum( np.square( np.dot( S, forward_likelihood - backward_likelihood ))) \
+            - 1000*np.sum( np.square( np.log( forward_likelihood ) - log_K + log_Q ))
+        return -f
+        
+def macro_entropy_production_rate_and_thermo_obj(x):
+        """Maximize product of  entropy production difference and macroscopic biomass growth rate of the ABC model"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        f = entropy(np.concatenate( (forward_probability, backward_probability ) ) )*net_flux[biomass] - 1000*np.sum(np.square(np.log(forward_likelihood) - log_K + log_Q))
+        return -f
+def steady_state_net_likelihood_constraint(x):
+        """$$S\cdot L_{net} = 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return np.dot(S,forward_likelihood-backward_likelihood)
+def steady_state_constraint(x):
+        """$$S\cdot v = 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return np.dot(S,net_flux)
+def thermodynamic_constraint(x):
+        """$$\log L_+ + \log Q - \log K = 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return np.log(forward_likelihood) + log_Q - log_K
+    
+def thermodynamic_jacobian(x):
+        """$$J\left[\log L_+ - \log K + \log Q\right]: {\mathscr R}^{2n+m}\rightarrow {\mathscr R}^{n\times 2n+m}=\left[\text{diag }(L_+^{-1})  & S^T\right] $$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables( x, fullS, mu0, deltaG0, R, T )
+        return np.append( np.diag(np.reciprocal(forward_likelihood)),      
+                                    fullS.T.as_matrix(), axis=1)
+def energy_barrier_constraint( x ):
+        """$$ \|\Delta G_{ext}\| - S^T\mu \geq 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return   np.abs(external_free_energy) - np.dot(fullS.T.as_matrix(),mu)
+def energy_sink_constraint( x ):
+        """$$S^T\mu + \|\Delta G_{ext}\| \geq 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux = make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return  np.dot(fullS.T.as_matrix(),mu) + np.abs(external_free_energy) 
+def second_law_constraint( x ):
+        """$$\log L_+ \geq 0 \iff v \geq 0$$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux= make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return np.log(forward_likelihood)*net_flux
+def flux_upper_constraint( x ):
+        """$$ v_U - r_+ + r_- \geq 0 $$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux= make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return v_U - forward_rate + backward_rate
+def flux_lower_constraint( x ):
+        """$$ r_+ - r_- - v_L \geq 0  $$"""
+        log_c, \
+        forward_rate, backward_rate, \
+        log_Q, log_K, \
+        forward_likelihood, backward_likelihood, \
+        forward_probability, backward_probability, mu, \
+        thermodynamic_driving_force, \
+        net_flux= make_variables_from_likelihoods( x, fullS, mu0, deltaG0, R, T )
+        return  forward_rate - backward_rate - v_L
+def cobra_model_to_mentos( cobra_model, 
+                    external_compartment='e', 
+                    std_rxn_free_energy='deltaG0', 
+                    std_chemical_potential='mu0',
+                    boundary_concentration = 'boundary_concentration',
+                    c_L = 1e-8,
+                    c_U = 1e-3,
+                    v_L = 0,
+                    v_U = 1000):
+    fullS = pd.DataFrame(cobra.util.array.create_stoichiometric_matrix(cobra_model), 
+                    index=[m.id for m in cobra_model.metabolites],
+                    columns = [r.id for r in cobra_model.reactions]),
+                
+    rxns, mets = fullS.columns, fullS.index
+    external_mets = [met.id for met in cobra_model.metabolites if met.compartment == external_compartment ]
+    internal_mets = [met.id for met in cobra_model.metabolites if met.compartment != external_compartment ]
+    S = fullS.loc[internal_mets]
+    deltaG0 = pd.Series(dict([(rxn.id, rxn.notes[std_rxn_free_energy] )
+                             for rxn in cobra_model.reactions 
+                                 if std_rxn_free_energy in rxn.notes]), 
+                        index=rxns)
+    mu0     = pd.Series(dict([(met.id, met.notes[std_chemical_potential] )
+                             for met in cobra_model.metabolites
+                                 if std_chemical_potential in met.notes]), 
+                        index=mets)
+    met_bounds = pd.Series(dict([(met.id, met.notes[boundary_concentration]) 
+                                     for met in cobra_model.metabolites 
+                                      if boundary_condition in met.notes]),
+                            index=external_mets)
+    biomass_rxn = [rxn.id 
+               for rxn in cobra_model.reactions 
+               if rxn.objective_coefficient != 0][0]
+    biomass = rxns.get_loc(biomass_rxn)
+    log_c_L = np.log(c_L)
+    log_c_U = np.log(c_U)
+    return dict(fullS=fullS, 
+                S = S,
+                rxns=rxns,
+                mets=mets,
+                external_mets = external_mets,
+                internal_mets = internal_mets,
+                met_bounds = met_bounds,
+                mu0 = mu0,
+                deltaG0 = deltaG0,
+                log_c_L = log_c_L,
+                log_c_U = log_c_U
+                )
